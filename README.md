@@ -1,2 +1,2 @@
-# noface-server
+# 0f-server
 Anonymous web (+mobile soon) chat server, built on top of Themis
