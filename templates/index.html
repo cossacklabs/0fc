@@ -76,9 +76,9 @@
     <embed name="nacl_module"
 	   id="secure_chat_client"
 	   width=0 height=0
-	   src="secure_chat.nmf"
-	   url="ws://127.0.0.1:8888/ws"
-	   server_pub="VUVDMgAAAC2IRalnA7mIDaKlK5HvBz2woET8cc2dJQ3sOQMYQ/13TtUNofnQ"
+	   src="{{ static_resolver(filename='secure_chat.nmf') }}"
+	   url="{{ url }}"
+	   server_pub="{{ server_public_key }}"
 	   type="application/x-pnacl" />
   </div>
 
