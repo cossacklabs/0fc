@@ -97,11 +97,11 @@ def wshandler(request):
                     history[pub_key] = []
             else:
                 ws_response.send_str('{} malformed request'.format(COMMAND.ERROR))
-        elif message.tp == web.MsgType.error:
-             del online[pub_key]
-             logger.info('closed')
-        elif message.tp == web.MsgType.close:
-            logger.info('connection closed')
+        elif message.tp == web.MsgType.closed  or message.tp == web.MsgType.close:
+           if pub_key in online:
+               del online[pub_key]
+           logger.info('connection closed')
+           break;
         else:
             ws_response.send_str('{} malformed request'.format(COMMAND.ERROR))
             if 'msg' in locals():
