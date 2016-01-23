@@ -34,6 +34,7 @@
 #include "ppapi/utility/completion_callback_factory.h"
 #include "ppapi/utility/threading/simple_thread.h"
 #include "ppapi/cpp/websocket.h"
+#include "nacl_io/nacl_io.h"
 
 #include "helpers/base64.hpp"
 #include "pnacl_websocket_api.hpp"
@@ -54,7 +55,9 @@ public:
     store_(this,this),
     socket_(this, this),
     url_(""),
-    user_name_(""){}
+    user_name_(""){
+	nacl_io_init_ppapi(instance, pp::Module::Get()->get_browser_interface());
+    }
 
   virtual ~secure_chat_instance() {}
   

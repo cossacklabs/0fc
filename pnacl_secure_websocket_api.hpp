@@ -17,11 +17,38 @@
 #ifndef _PNACL_SECURE_WEBSOCKET_API_H_
 #define _PNACL_SECURE_WEBSOCKET_API_H_
 
+#include "themispp/secure_session.hpp"
 #include "pnacl_websocket_api.hpp"
 
 namespace pnacl {
 
-  
+  class secure_websocket_api{
+  public:
+    secure_websocket_api(pp::Instance* ppinstance, const std::vector<uint8_t>& server_pub_key, web_socket_receive_listener* recv_listener):
+      socket_(ppinstance, this),
+      receive_listener_(recv_listener){}
+
+    ~secure_websocket_api(){}
+
+
+    void open(const std::string& url){
+	receive_listener_->on_error(res, "socket_.Connect");
+    }
+    
+    void send(const std::string& data) {
+      socket_.send(data);
+    }
+
+    void receive(){
+      int32_t res=socket_.ReceiveMessage(&received_data_, callback_factory_.NewCallback(&websocket_api::receive_handler));
+      if(res!=PP_OK_COMPLETIONPENDING)
+	receive_listener_->on_error(res, "socket_.ReceiveMessage");
+    }
+
+  private:
+    websocket_api socket_;
+    web_socket_receive_listener* const receive_listener_;
+  };
   
 } //end pnacl
 

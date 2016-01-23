@@ -61,6 +61,7 @@ def wshandler(request):
                 if (message_params[2] in rooms and
                             message_params[3] == rooms[message_params[2]]['owner'] and
                             message_params[3] in online):
+                    print("aaaaaa", message_params[3], msg);
                     online[message_params[3]].send_str(msg)
                 else:
                     ws_response.send_str('{} {}'.format(COMMAND.INVALID_INVITE,

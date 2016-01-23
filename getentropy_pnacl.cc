@@ -25,52 +25,25 @@ int getentropy(void *buf, size_t len)
 {
 	struct stat st;
 	size_t i;
-	int fd, flags;
+	int flags;
 	int save_errno = errno;
-
-start:
-
-        flags = O_RDONLY;
-#ifdef O_NOFOLLOW
-        flags |= O_NOFOLLOW;
-#endif
-#ifdef O_CLOEXEC
-        flags |= O_CLOEXEC;
-#endif
-	fd = open("/dev/urandom", flags, 0);
-	if (fd == -1) {
-		if (errno == EINTR)
-			goto start;
-		goto nodevrandom;
+	FILE* fd = fopen("/dev/urandom", "r");
+	if (!fd) {
+	    fprintf(stderr, "Unable to open /dev/urandom.\n");
+	    return -1;
 	}
-#ifndef O_CLOEXEC
-	fcntl(fd, F_SETFD, fcntl(fd, F_GETFD) | FD_CLOEXEC);
-#endif
-
-	/* Lightly verify that the device node looks sane */
-	if (fstat(fd, &st) == -1 || !S_ISCHR(st.st_mode)) {
-		close(fd);
-		goto nodevrandom;
-    }
-	for (i = 0; i < len; ) {
-		size_t wanted = len - i;
-		ssize_t ret = read(fd, (char*)buf + i, wanted);
-
-		if (ret == -1) {
-			if (errno == EAGAIN || errno == EINTR)
-				continue;
-			close(fd);
-			goto nodevrandom;
-		}
-		i += ret;
+	ssize_t bytes = fread(buf, 1, len, fd);
+	if (bytes != len) {
+	    fprintf(stderr, "Unable to read %d bytes.\n", len);
+	    fclose(fd);
+	    return -1;
 	}
-	close(fd);
+	fclose(fd);
 	if (gotdata((char*)buf, len) == 0) {
 		errno = save_errno;
 		return 0;		/* satisfied */
 	}
-nodevrandom:
-	errno = EIO;
+	fprintf(stderr, "other error");
 	return -1;
 }
 
