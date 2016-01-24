@@ -1,0 +1,223 @@
+diff --git a/Makefile b/Makefile
+index ec61828..314ec9c 100644
+--- a/Makefile
++++ b/Makefile
+@@ -14,6 +14,13 @@
+ # limitations under the License.
+ #
+ 
++CC=$(PNACL_ROOT)/toolchain/linux_pnacl/bin/pnacl-clang
++CXX=$(PNACL_ROOT)/toolchain/linux_pnacl/bin/pnacl-clang++
++LD=$(PNACL_ROOT)/toolchain/linux_pnacl/bin/pnacl-ld
++AR=$(PNACL_ROOT)/toolchain/linux_pnacl/bin/pnacl-ar
++CFLAGS=-I$(PNACL_ROOT)/include/pnacl -I$(PNACL_ROOT)/usr/include/pnacl -I/home/andrey/progs/libs/libressl-2.2.3/include -DTHEMIS_PNACL
++
++
+ #CC = clang
+ SRC_PATH = src
+ BIN_PATH = build
+diff --git a/src/soter/openssl/soter_ec_key.c b/src/soter/openssl/soter_ec_key.c
+index 19c8e8d..ac05f9f 100644
+--- a/src/soter/openssl/soter_ec_key.c
++++ b/src/soter/openssl/soter_ec_key.c
+@@ -21,6 +21,7 @@
+ #include <openssl/ec.h>
+ 
+ #include <string.h>
++#include <netinet/in.h>
+ 
+ static bool is_curve_supported(int curve)
+ {
+diff --git a/src/soter/openssl/soter_rsa_key.c b/src/soter/openssl/soter_rsa_key.c
+index af4fc43..d85a7aa 100644
+--- a/src/soter/openssl/soter_rsa_key.c
++++ b/src/soter/openssl/soter_rsa_key.c
+@@ -21,6 +21,7 @@
+ #include <openssl/rsa.h>
+ 
+ #include <string.h>
++#include <netinet/in.h>
+ 
+ static size_t rsa_pub_key_size(int mod_size)
+ {
+diff --git a/src/soter/soter_container.c b/src/soter/soter_container.c
+index 6a4e14d..9ca6a85 100644
+--- a/src/soter/soter_container.c
++++ b/src/soter/soter_container.c
+@@ -19,6 +19,7 @@
+ #include <soter/error.h>
+ #include <soter/soter_crc32.h>
+ #include <arpa/inet.h>
++#include <netinet/in.h>
+ soter_status_t soter_update_container_checksum(soter_container_hdr_t *hdr)
+ {
+ 	hdr->crc = 0;
+diff --git a/src/themis/portable_endian.h b/src/themis/portable_endian.h
+index 87c0457..793a81d 100644
+--- a/src/themis/portable_endian.h
++++ b/src/themis/portable_endian.h
+@@ -16,113 +16,9 @@
+ 
+ #ifndef PORTABLE_ENDIAN_H__
+ #define PORTABLE_ENDIAN_H__
+- 
+-#if (defined(_WIN16) || defined(_WIN32) || defined(_WIN64)) && !defined(__WINDOWS__)
+- 
+-# define __WINDOWS__
+- 
+-#endif
+- 
+-#if defined(__linux__) || defined(__CYGWIN__)
+- 
+-# include <endian.h>
+ 
+-#if defined(ANDROID) && !defined(be64toh)
++#include <netinet/in.h>
++uint64_t htobe64(uint64_t x) { return htons(1) == 1 ? x : (((uint64_t)htonl(x)) << 32) + htonl(x >> 32); }
++uint64_t be64toh(uint64_t x) { return htons(1) == 1 ? x : (((uint64_t)ntohl(x)) << 32) + ntohl(x >> 32); } 
+ 
+-#define be64toh(x) htobe64(x)
+-
+-#endif
+- 
+-#elif defined(__APPLE__)
+- 
+-# include <libkern/OSByteOrder.h>
+- 
+-# define htobe16(x) OSSwapHostToBigInt16(x)
+-# define htole16(x) OSSwapHostToLittleInt16(x)
+-# define be16toh(x) OSSwapBigToHostInt16(x)
+-# define le16toh(x) OSSwapLittleToHostInt16(x)
+-# define htobe32(x) OSSwapHostToBigInt32(x)
+-# define htole32(x) OSSwapHostToLittleInt32(x)
+-# define be32toh(x) OSSwapBigToHostInt32(x)
+-# define le32toh(x) OSSwapLittleToHostInt32(x)
+-# define htobe64(x) OSSwapHostToBigInt64(x)
+-# define htole64(x) OSSwapHostToLittleInt64(x)
+-# define be64toh(x) OSSwapBigToHostInt64(x)
+-# define le64toh(x) OSSwapLittleToHostInt64(x)
+- 
+-# define __BYTE_ORDER BYTE_ORDER
+-# define __BIG_ENDIAN BIG_ENDIAN
+-# define __LITTLE_ENDIAN LITTLE_ENDIAN
+-# define __PDP_ENDIAN PDP_ENDIAN
+- 
+-#elif defined(__OpenBSD__)
+- 
+-# include <sys/endian.h>
+- 
+-#elif defined(__NetBSD__) || defined(__FreeBSD__) || defined(__DragonFly__)
+- 
+-# include <sys/endian.h>
+- 
+-# define be16toh(x) betoh16(x)
+-# define le16toh(x) letoh16(x)
+- 
+-# define be32toh(x) betoh32(x)
+-# define le32toh(x) letoh32(x)
+- 
+-# define be64toh(x) betoh64(x)
+-# define le64toh(x) letoh64(x)
+- 
+-#elif defined(__WINDOWS__)
+- 
+-# include <winsock2.h>
+-# include <sys/param.h>
+- 
+-# if BYTE_ORDER == LITTLE_ENDIAN
+- 
+-# define htobe16(x) htons(x)
+-# define htole16(x) (x)
+-# define be16toh(x) ntohs(x)
+-# define le16toh(x) (x)
+-# define htobe32(x) htonl(x)
+-# define htole32(x) (x)
+-# define be32toh(x) ntohl(x)
+-# define le32toh(x) (x)
+-# define htobe64(x) htonll(x)
+-# define htole64(x) (x)
+-# define be64toh(x) ntohll(x)
+-# define le64toh(x) (x)
+- 
+-# elif BYTE_ORDER == BIG_ENDIAN
+- 
+-/* that would be xbox 360 */
+-# define htobe16(x) (x)
+-# define htole16(x) __builtin_bswap16(x)
+-# define be16toh(x) (x)
+-# define le16toh(x) __builtin_bswap16(x)
+-# define htobe32(x) (x)
+-# define htole32(x) __builtin_bswap32(x)
+-# define be32toh(x) (x)
+-# define le32toh(x) __builtin_bswap32(x)
+-# define htobe64(x) (x)
+-# define htole64(x) __builtin_bswap64(x)
+-# define be64toh(x) (x)
+-# define le64toh(x) __builtin_bswap64(x)
+- 
+-# else
+- 
+-# error byte order not supported
+- 
+-# endif
+- 
+-# define __BYTE_ORDER BYTE_ORDER
+-# define __BIG_ENDIAN BIG_ENDIAN
+-# define __LITTLE_ENDIAN LITTLE_ENDIAN
+-# define __PDP_ENDIAN PDP_ENDIAN
+- 
+-#else
+- 
+-# error platform not supported
+- 
+-#endif
+- 
+ #endif 
+diff --git a/src/themis/secure_session.c b/src/themis/secure_session.c
+index ebe9a43..671ebaf 100644
+--- a/src/themis/secure_session.c
++++ b/src/themis/secure_session.c
+@@ -24,6 +24,7 @@
+ 
+ #include <themis/secure_session_utils.h>
+ #include <soter/soter_t.h>
++#include <netinet/in.h>
+ 
+ #define SESSION_ID_GENERATION_LABEL "Themis secure session unique identifier"
+ #define SESSION_MASTER_KEY_GENERATION_LABEL "Themis secure session master key"
+diff --git a/src/themis/secure_session_message.c b/src/themis/secure_session_message.c
+index 8b95e77..1135651 100644
+--- a/src/themis/secure_session_message.c
++++ b/src/themis/secure_session_message.c
+@@ -24,6 +24,7 @@
+ #include <string.h>
+ 
+ #include <arpa/inet.h>
++#include <netinet/in.h>
+ #include "portable_endian.h"
+ 
+ #define THEMIS_SESSION_WRAP_TAG "TSWM"
+diff --git a/src/themis/secure_session_serialize.c b/src/themis/secure_session_serialize.c
+index 8b60217..7544ada 100644
+--- a/src/themis/secure_session_serialize.c
++++ b/src/themis/secure_session_serialize.c
+@@ -23,6 +23,7 @@
+ #include <string.h>
+ 
+ #include <arpa/inet.h>
++#include <netinet/in.h>
+ 
+ #define THEMIS_SESSION_CONTEXT_TAG "TSSC"
+ 
+diff --git a/src/themis/secure_session_utils.c b/src/themis/secure_session_utils.c
+index 8f53d4c..e0c3ed8 100644
+--- a/src/themis/secure_session_utils.c
++++ b/src/themis/secure_session_utils.c
+@@ -23,6 +23,7 @@
+ #include <soter/soter_ec_key.h>
+ 
+ #include <themis/error.h>
++#include <netinet/in.h>
+ 
+ #define MAX_HMAC_SIZE 64 /* For HMAC-SHA512 */
+ 
