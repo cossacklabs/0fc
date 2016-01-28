@@ -15,6 +15,7 @@
 #
 
 NACL_SDK_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_44/
+PNACL_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_44/
 #PNACL_ROOT=/home/andrey/progs/libs/nacl_sdk/pepper_44
 #PNACL_TOOLCHAIN=/toolchain/linux_pnacl
 

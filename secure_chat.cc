@@ -118,6 +118,7 @@ private:
 
   void remove_room(const std::string& room_name){
     store_.rm_key(room_name);
+    post("remove_room", room_name);
   }
 public:  
   virtual void on_receive(const std::string& data){

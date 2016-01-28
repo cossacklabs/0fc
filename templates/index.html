@@ -1,72 +1,554 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Secure chat</title>
-    <!-- Latest compiled and minified CSS -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+<html><head><meta charset="UTF-8"/>
 
-    <!-- Optional theme -->
-    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+	<title>Secure Chat</title>
 
-    <style>
-        .hidden {
-            display: none;
-        }
-    </style>
+	<meta name="keywords" content="secure chat"/>
+	<meta name="description" content="Just secure chat"/>
+	<meta name="author" content="__,,,^._.^,,,__"/>
 
-    <script type="text/javascript">
-      secure_chat_client = null;
+	<meta name="viewport" content="width=device-width,initial-scale=1"/>
 
-      navigator.webkitPersistentStorage.requestQuota(5 * 1024 * 1024,
-      function(bytes) {
-        $('#log').append('<b>info:</b>Allocated ' + bytes + ' bytes of persistant storage.<br>');
-      },
-      function(e) { alert('Failed to allocate space') });
+	<link rel="stylesheet" type="text/css" href="cl.css"/>
+	<script type="text/javascript" src="cl.js"></script>
 
-      function moduleDidLoad() {
-         secure_chat_client = document.getElementById('secure_chat_client');
-          $('#log').append('<b>info:</b>PNACL themis module loaded<br>');
-      }
+</head><body class="stage1">
 
-      function handleMessage(message_event) {
-         msg=message_event.data;
-         command=msg[0];
-         args=msg.slice(1);
-         if (command == "available_chat_list")
+
+
+
+
+<style>
+
+	*				{
+					 margin:0;
+					 padding:0;
+					 border:none;
+					 outline:none;
+					 background:transparent;
+					}
+
+	html,
+	body				{width:100%; height:100%; position:absolute; overflow:hidden; background:#eee;}
+
+	body,
+	input,
+	button,
+	textarea			{font-size:16px; font-family:Arial, helvetica; fline-height:1.1em; }
+
+	input,
+	button				{width:100%; padding:0.65em 0.5em 0.55em 0.5em; background:#fff; border:1px #abc solid; box-sizing:border-box;}
+
+	p				{margin:1em 0;}
+
+	.auth				{position:absolute; width:100%; height:100%; background:#abc; top:0; visibility:hidden;}
+	.auth form			{width:100%; max-width:24em; height:100%; max-height:14em; background:#b1c3d5; top:0; right:0; bottom:0; left:0; margin:auto; position:absolute; box-sizing:border-box; padding:1.5em 2em;}
+	.auth form button		{width:80%; margin:1.5em auto 0 auto; display:block; background:royalblue; color:#fff; padding:0.65em 0 0.55em 0; cursor:pointer;}
+
+
+
+
+	.rooms				{position:absolute; overflow-y:scroll; width:100%; background:#b6c8db; top:0; left:0; right:0; bottom:0; visibility:hidden;}
+	.rooms .pad			{width:100%;}
+	.rooms p			{width:100%; max-width:24em; height:100%; height:4em; margin:1px auto 0 auto; background:#cbe1f5;}
+
+
+
+	iframe				{position:absolute; width:100%; height:100%;}
+	.chat				{position:absolute; width:100%; height:100%; background:#aea; ftop:-30%; visibility:hidden;}
+	.chat .iframe			{position:absolute; bottom:6em; top:0; left:0; right:16em;}
+	.chat .input			{position:absolute; height:6em; bottom:0; left:0; right:16em; background:#aab; padding:0 1em; box-sizing:border-box;}
+	.chat .users			{position:absolute; height:100%; width:16em; right:0; overflow-y:auto; background:#e2e4e8; }
+
+	.users p			{background:#fff; margin:2px 0 2px 0.5em; padding:1em 0.5em; font-size:0.8em;}
+
+
+	#chatinput			{border:2px #89f solid; margin:0.5em auto; padding-right:6em; box-sizing:border-box;}
+	#chatsubmit			{border:2px #89f solid; border-left:1px #aaa solid; width:6em; background:#eee; position:absolute; top:0.5em; right:1em; }
+
+
+
+
+.stage1	.auth				{visibility:visible;}
+.stage2 .rooms				{visibility:visible; opacity:1;}
+.stage3 .chat				{visibility:visible;}
+
+
+	.auth,
+	.auth form			{transition:top ease-out 0.2s, opacity ease-out 0.2s;}
+.stage1.loading .auth			{top:-7em;}
+.stage1.loading .auth form		{top:-20em; opacity:0; fvisibility:hidden;}
+
+	.rooms				{opacity:1; left:0; transition:left ease-out 0.3s, bottom ease-out 0.3s, background ease-out 0.3s;}
+.stage1.loading .rooms			{bottom:7em; background:#abc;}
+
+ 	.rooms .pad			{opacity:1; margin:2em 0 0 0; transition:opacity ease-out 0.3s, margin ease-out 0.3s}
+.stage1.loading .rooms .pad		{opacity:0; margin:4em 0 0 0; }
+
+
+
+
+.stage2 .chat				{visibility:visible;}
+.stage2 .chat				{left:100%; opacity:0.5; transition:left ease-out 0.3s, opacity ease-out 0.3s;}
+.stage2.stage3 .rooms .pad		{margin:2em 0 0 -5em;}
+.stage2.stage3 .chat			{left:0; opacity:1;}
+
+
+.loaded .auth				{opacity:1; z-index:1000; top:0; left:-50%; visibility:hidden;}
+.loaded .auth form			{transition:none;}
+.loaded .auth				{transition:left ease-out 0.3s;}
+
+.unload .auth				{left:0; visibility:visible;}
+
+</style>
+
+
+
+
+
+
+
+
+
+
+
+<style>
+
+
+
+
+	.preloader			{width:160px; height:3em; margin-left:-50px; bottom:0; left:50%; position:absolute}
+	.ani				{text-align: center;}
+
+	.ani b				{width:1em; height:1em; margin:0 0.75em; background:#abc; border-radius:100%; display: inline-block; -webkit-animation:ani-bounce 1.4s infinite ease-in-out both; animation:ani-bounce 1.4s infinite ease-in-out both;}
+	.ani .s1			{-webkit-animation-delay: -0.32s; animation-delay: -0.32s}
+	.ani .s2			{-webkit-animation-delay: -0.16s; animation-delay:-0.16s}
+
+@-webkit-keyframes ani-bounce {
+	0%,80%,100%			{-webkit-transform:scale(0)}
+	40%				{-webkit-transform:scale(1)}
+}
+
+@keyframes ani-bounce {
+	0%, 80%, 100%			{transform:scale(0)}
+	40%				{transform:scale(1)}
+}
+
+	.preloader			{visibility:hidden; transition:height ease-out 0.3s}
+.loading .preloader			{height:4em; visibility:visible;}
+
+</style>
+
+
+<div class="preloader ani"><b class="s1"></b><b class="s2"></b><b class="s3"></b></div>
+
+<div class="auth">
+
+	<form>
+		<p><input id="login" type="text" placeholder="Your email as authname"/></p>
+		<p><input id="password" type="password" placeholder="Your password"/></p>
+		<p><button onclick="on_login( document.getElementById('login').value, document.getElementById('password').value); return false; ">Login</button></p>
+	</form>
+
+</div>
+
+
+
+
+
+<div class="rooms" id="rooms"><div class="pad">
+
+	<p><a href="#" onclick="secure_chat_client.postMessage('create_new_room'); return false;">Add new room</a></p>
+
+	<p>
+
+	<input type="text" name="invite" placeholder="paste invite" id="invite_to_approve"><button id="approve" onclick="secure_chat_client.postMessage('join_by_invite ' + document.getElementById('invite_to_approve').value ); return false;">Join</button>
+
+	</p>
+
+
+
+</div></div>
+
+
+
+<div class="chat">
+
+	<div id="iframe" class="iframe"></div>
+	<div class="input">
+
+		<input type="text" id="chatinput"/>
+		<button id="chatsubmit">Say!</button>
+
+		<a href="#" onclick="_chatSay('While usability testing for user-centric applications has it\'s own distinct techniques, standards and frameworks, this is not so typical for a relatively complex and technical library aimed at developers and spanning multiple languages and platforms.'); return false;">I Say1</a>
+		<a href="#" onclick="_chatSay('The decision to make Themis an open source project brought with it the need to provide not just source code but also a bunch of high-level language wrappers, documentation, examples and to test the overall usability of these materials.'); return false;">I Say2</a>
+		<a href="#" onclick="_chatSay('We decided the best way to test this was to run a live test. What would it take to integrate Themis into a working mobile client / API server application? How much time? How much effort? Would it work? What would the developers think of the experience?'); return false;">I Say3</a>
+
+		<a href="#" onclick="_chatSay('While usability testing for user-centric applications has it\'s own distinct techniques, standards and frameworks, this is not so typical for a relatively complex and technical library aimed at developers and spanning multiple languages and platforms.','Oth3r_1'); return false;">Other Say1</a>
+		<a href="#" onclick="_chatSay('The decision to make Themis an open source project brought with it the need to provide not just source code but also a bunch of high-level language wrappers, documentation, examples and to test the overall usability of these materials.','Megatron'); return false;">Other Say2</a>
+		<a href="#" onclick="_chatSay('We decided the best way to test this was to run a live test. What would it take to integrate Themis into a working mobile client / API server application? How much time? How much effort? Would it work? What would the developers think of the experience?','n0tsy$stE///'); return false;">Other Say3</a>
+
+	</div>
+	<div class="users">
+
+		<p><a href="">user1</a></p>
+		<p><a href="">user2</a></p>
+		<p><a href="">user3</a></p>
+
+        <div class="row" style="margin-top: 2em;">
+            <button id="generate_invite" onclick="secure_chat_client.postMessage('generate_invite');return false;">Generate invite</button>
+        </div>
+        <div class="row hidden" id="generated_invite_block">
+            <input type="text" name="generated_invite" id="generated_invite" readonly="readonly">
+            <a href="javascript:;" id="hide_invite">Hide</a>
+        </div>
+
+
+	</div>
+
+</div>
+
+
+
+
+
+
+
+
+
+
+
+
+<script>
+
+	HTMLElement.prototype.classPerk = function(t,e){function s(t,e){for(var s=[],n={},r=t.length-1;r>-1;)!!t[r]&&!(e==t[r])&&!n[t[r]]&&s.unshift(t[r]),n[t[r--]]=1;return s}var t=t.split(" "),e=e||0,n=this.className.split(" ");if(0==e)n=s(n.concat(t));else if(-1==e)for(var r=t.length-1;r>-1;)n=s(n,t[r--]);else if(1==e)for(var r=t.length-1;r>-1;){var i=t[r--];n.indexOf(i)>-1?n=s(n,i):n.push(i)}else{e=e.split(" ");for(var r=e.length-1;r>-1;)n=s(n,e[r--]);n=s(n.concat(t))}this.className=n.join(" ");return this};
+
+
+
+	/* shortcuts */
+
+	function _body()  {
+
+		return document.getElementsByTagName('body')[0];
+	}
+
+
+
+
+
+
+
+	var
+	chatinput = document.getElementById('chatinput');
+	chatinput.onkeyup = function(e) {
+
+		if (13 === e.keyCode) {
+
+
+/* for test [ */
+var
+val = chatinput.value;
+setTimeout(function(){ 
+(function( v ){ _chatSay( ('This is auto reply... You just said: ' + v ) , 'System' ); })( val );}, 3000);
+/* ] for test */
+
+			_chatSubmit( chatinput );
+
+
+		}
+	};
+
+	chatinput.focus();
+
+
+	var
+	chatsubmit = document.getElementById('chatsubmit');
+	chatsubmit.onclick = function() {
+
+		_chatSubmit();
+	};
+
+
+
+
+	var
+	iframe		= document.getElementById('iframe')
+			. appendChild(  document.createElement('iframe') );
+
+			iframe.contentWindow.document.open();
+			iframe.contentWindow.document.write('<body></body>');
+			iframe.contentWindow.document.close();
+
+	var
+	chat		= iframe.contentWindow.document.getElementsByTagName('body')[0];
+
+	chat.content	= chat.appendChild( document.createElement('div') );
+
+
+	chat.parentNode
+			.appendChild( document.createElement('head') )
+			.appendChild( document.createElement('style') )
+			.appendChild( document.createTextNode(
+
+			  '*		{margin:0; padding:0;}'
+			+ 'body		{font-size:14px; font-family:Arial, helvetica; background:#fff}'
+			+ 'p		{padding:0.75em 1em; border:1px #fff solid; line-height:1.4em}'
+
+			+ '.me		{background:#e5e7f0; margin:0 1.5em 0 20%}'
+			+ '.me span	{display:block; color:#7a9; font-size:0.7em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
+
+			+ '.other	{background:#eee; margin-right:20%}'
+			+ '.other span	{display:block; color:#7a9; font-size:0.85em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
+
+			));
+
+
+
+
+
+
+
+
+			
+
+function _chatSubmit( a ) {
+
+	var
+	a = a || document.getElementById('chatinput');
+
+	secure_chat_client.postMessage('message <b>' + USER + ':</b> ' + a.value );
+	_chatSay( a.value );
+//alert(1);
+	a.value = '';
+	a.focus();
+
+	return false;
+}
+
+
+function _chatSay( a, n ) {
+
+	if(!a) return false;
+
+	var
+	p = document.createElement('p'),
+	s = document.createElement('span'),
+	t = new Date();
+
+	s.appendChild(document.createTextNode( 
+
+		t.getHours().toLocaleString('en-US', {minimumIntegerDigits:2})
+		+ ':'
+		+ t.getMinutes().toLocaleString('en-US', {minimumIntegerDigits:2})
+		+ ':'
+		+ t.getSeconds().toLocaleString('en-US', {minimumIntegerDigits:2})
+		+ ((n) ? ' ' + n : '')
+	));
+
+
+	p.className  = (!n) ? 'me' : 'other';
+
+	p.appendChild( document.createTextNode( a ) );
+	p.appendChild( s );
+
+	_chatUpdate( p );
+
+	return true;
+}
+
+
+function _chatUpdate( p ) {
+
+	if (!p) return false;
+
+	chat.content.appendChild( p );
+
+	_chatResize();
+
+	return true;
+}
+
+
+function _chatResize () {
+
+	chat.scrollTop = chat.offsetHeight;
+
+	chat.style.paddingTop = (iframe.offsetHeight - chat.content.offsetHeight) + 'px';
+}
+
+
+window.onresize = function() {
+
+	_chatResize();
+
+}
+
+
+</script>
+
+
+
+
+
+
+
+
+
+
+<style>
+
+		.demo		{position:absolute; width:50%; bottom:0; left:50%; padding:1.5em; background:#000; font-size:11px; font-weight:bold; z-index:10000;}
+		.demo a		{padding:0 1em;}
+
+		.d1,
+		.d3,
+		.d4,
+		.d5,
+		.d6		{display:none;}
+
+.loading	.d1,
+.loading	.d3		{display:inline;}
+.loading	.d2		{display:none}
+
+.stage2		.d4,
+.stage2		.d5		{display:inline;}
+.stage2		.d2		{display:none;}
+
+
+.stage3		.d4		{display:none;}
+.stage3		.d3		{display:inline;}
+
+.unload		.d1,
+.unload		.d2,
+.unload		.d3,
+.unload		.d4,
+.unload		.d5		{display:none;}
+.unload		.d6		{display:inline;}
+
+</style>
+
+<div class="demo">
+	<span style="color:#eee">DEMO:</span>
+	<a class="d1" href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Back to login if auth fails...</a>
+	<a class="d2"  href="#" style="color:#fc0" onclick="_body().classPerk('loading'); return false;">...checking login...</a>
+
+	<a class="d5"  href="#" style="color:#fc0" onclick="_body().classPerk('unload'); return false;">Logout</a>
+	<a class="d6"  href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Reset</a>
+
+	<a class="d3"  href="#" style="color:#fc0" onclick="_body().classPerk('stage2 loaded', 'stage1 stage3 loading'); return false;">Show rooms</a>
+	<a class="d4"  href="#" style="color:#fc0" onclick="_body().classPerk('stage3'); return false;">Chat</a>
+
+</div>
+
+
+
+
+<style>
+
+#syslog			{position:absolute; width:400px; height:100px; left:-390px; top:20px; background:#fff; color:#080; border-right:8px #f00 solid}
+#syslog:hover		{left:0;}
+
+</style>
+
+<textarea id="syslog" >This is log...</textarea>
+
+<script>
+
+function syslog( m ) {
+
+	var l = document.getElementById('syslog');
+	l.value = m + '\n' +  l.value;
+}
+
+var
+USER,
+secure_chat_client;
+
+function moduleDidLoad() {
+   secure_chat_client = document.getElementById('secure_chat_client');
+   syslog('info:PNACL themis module loaded');
+}
+
+function handleMessage(message_event) {
+   msg=message_event.data;
+   command=msg[0];
+   args=msg.slice(1);
+
+   if (command == "available_chat_list")
          {
+//	alert('wait');
              var arr = msg[1].split(' ');
-             show_chat_list();
+        //     show_chat_list();
+	_body().classPerk('stage2 loaded', 'stage1 stage3 loading');
+
+
+
+var rooms = document.getElementById('rooms').childNodes[0];
+
              for(var i = 0; i < arr.length; i++){
-		add_room_to_list(arr[i],arr[i])	 
+
+
+var
+p = document.createElement('p'),
+a = document.createElement('a'),
+t = document.createTextNode( arr[i] );
+
+p.id=arr[i];
+a.href = "#";
+a.onclick = function() {
+
+    secure_chat_client.postMessage('open_room ' + this.innerHTML );
+    return false;
+}
+
+
+a.appendChild(t);
+p.appendChild(a);
+rooms.appendChild(p);
+
              }
          }
          else if (command == "new_room")
          {
-             open_chat(msg[1]);
+             secure_chat_client.postMessage("open_room "+msg[1]);
          }
          else if (command == "open_room")
          {
-		show_chat();
+	//show_chat();
+	_body().classPerk('stage3');
          }
          else if (command == "invite")
-	 {
-		show_generated_invite(args);
+     {
+document.getElementById('generated_invite').value = args;
+//	show_generated_invite(args);
          }
          else if (command == "new_message")
-	{
-		add_message(args);		
+    {
+	_chatSay(args, 'other');
+//	add_message(args);		
+         }
+         else if (command == "remove_room")
+    {
+
+tmp = document.getElementById(args);
+//alert(tmp)
+	tmp.parentNode.removeChild( tmp );
          }
          else
          {
-             $('#log').append('<b>'+command+':</b>'+args+'<br>');
+             syslog( command + ': ' + args );
          }
       }
+    
+function on_login(login, password){
 
+    USER = login;
+    secure_chat_client.postMessage("login "+login+" "+password);
+    //show_wait();
+    _body().classPerk('loading');
+}
 
-    </script>
-</head>
-<body>
+</script>
   <div id="listener">
     <script type="text/javascript">
       var listener = document.getElementById('listener');
@@ -74,206 +556,15 @@
       listener.addEventListener('load', moduleDidLoad, true);
     </script>
     <embed name="nacl_module"
-	   id="secure_chat_client"
-	   width=0 height=0
-	   src="{{ static_resolver(filename='secure_chat.nmf') }}"
-	   url="{{ url }}"
-	   server_pub="{{ server_public_key }}"
-	   type="application/x-pnacl" />
+       id="secure_chat_client"
+       width="0" height="0"
+       src="{{ static_resolver(filename='secure_chat.nmf') }}"
+       url="{{ url }}"
+       server_pub="{{ server_public_key }}"
+       type="application/x-pnacl" />
   </div>
 
 
-  <div class="container-fluid">
-
-    <div id='wait_block' class='hidden'>
-      <h1>WAIT...</h1>
-    </div>
-    <div id="login_block" class="hidden">
-        <div class="row">
-            <input type="text" placeholder="login" name="login" id="login">
-        </div>
-        <div class="row">
-            <input type="text" placeholder="password" name="password" id="password">
-        </div>
-
-        <button id="login_ok">Ok</button>
-    </div>
-
-    <script type="application/javascript">
-        var is_chrome = navigator.userAgent.toLowerCase().indexOf('chrome') > -1;
-        if(is_chrome){
-            document.getElementById('login_block').className = '';
-        } else {
-            document.write('Chat only works in Chrome');
-        }
-    </script>
-
-    <div id="chat_list_block" class="hidden">
-        <div class="row">
-            Select chat room:
-            <ul id="chat_list">
-
-            </ul>
-        </div>
-        <div class="row">
-            <button id="create_new_room">Create new room</button>
-        </div>
-        <div class="row">
-            <input type="text" name="invite" placeholder="paste invite" id="invite_to_approve">
-            <button id="approve">Join</button>
-        </div>
-    </div>
-
-    <div id="chat" class="hidden">
-        <div id="messages" class="row">
-
-        </div>
-        <div class="row" style="margin-top: 2em;">
-            <button id="generate_invite">Generate invite</button>
-        </div>
-        <div class="row hidden" id="generated_invite_block">
-            <input type="text" name="generated_invite" id="generated_invite" readonly="readonly">
-            <a href="javascript:;" id="hide_invite">Hide</a>
-        </div>
-
-        <div class="row">
-            <input type="text" id="new_message" placeholder="send message" style="float: left;">
-            <button id="send_message">Send</button>
-        </div>
-
-        <div style="clear:both;"></div>
-
-    </div>
-</div>
-
-  <div id="log" class="row" style="margin-top: 2em;">
-
-  </div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.0.0-alpha1/jquery.min.js" type="application/javascript"></script>
-    <!-- Latest compiled and minified JavaScript -->
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
-<script>
-    var LOGIN = null;
-
-    ///////
-    // events
-    ///////
-    function on_login(login, password){
-        secure_chat_client.postMessage("login "+login+" "+password);
-        show_wait();
-    }
-
-    function on_create_new_room(){
-        secure_chat_client.postMessage("create_new_room");
-        show_wait();
-    }
-    
-    function on_room_select(chat_name, chat_url){
-        open_chat(chat_name);
-    }
-
-    function on_send_message(message){
-        secure_chat_client.postMessage('message <b>'+LOGIN+':</b> '+message);
-        add_message('<b>'+LOGIN+':</b> '+message);
-    }
-
-    function on_approve(invite){
-        secure_chat_client.postMessage("join_by_invite "+invite);
-        show_wait();
-    }
-
-    function on_generate_invite(){
-        secure_chat_client.postMessage("generate_invite");
-        //show_generated_invite('asda');
-    }
-
-    function open_chat(chat_name){
-         secure_chat_client.postMessage("open_room "+chat_name);
-    }
-    ////////
-    // API
-    //
-    function add_message(message){
-        // add message to chat
-        $('#messages').append(message+'<br>');
-    }
-
-    function add_log(message){
-        // add log to log block
-        $('#log').append('<p>'+message+'</p>');
-    }
-
-    function add_room_to_list(room_name, room_url){
-        // add chat item to chat list
-        $('#chat_list').append('<li><a class="chat_room" data-url="'+room_url+'" href="javascript:;">' + room_name + '</a>')
-    }
-
-    function show_wait(){
-        // hide login block and show chat list block
-        $('#login_block').addClass('hidden');
-        $('#chat_list_block').addClass('hidden');
-        $('#chat_block').addClass('hidden');    
-        $('#wait_block').removeClass('hidden');
-    }
-
-    function show_chat_list(){
-        // hide login block and show chat list block
-        $('#wait_block').addClass('hidden');
-        $('#login_block').addClass('hidden');
-        $('#chat_list_block').removeClass('hidden');
-    }
-
-    function show_chat(){
-        // hide chat list block and show chat block
-        $('#wait_block').addClass('hidden');
-        $('#chat_list_block').addClass('hidden');
-        $('#chat').removeClass('hidden');
-    }
-
-    function show_generated_invite(invite){
-    // set generated invite and show him
-        $('#generated_invite').val(invite);
-        $('#generated_invite_block').removeClass('hidden');
-    }
-    ////////
-
-    $('#login_ok').on('click', function(){
-        var login = document.getElementById('login').value;
-        var password = document.getElementById('password').value;
-        LOGIN = login;
-        on_login(login, password);
-    })
 
 
-    $('#chat_list').on('click', '.chat_room', function(){
-        var chat_name = $(this).text().trim();
-        var chat_url = $(this).data('url');
-        on_room_select(chat_name, chat_url);
-    });
-
-    $('#send_message').on('click', function(){
-        var message = $('#new_message').val();
-        on_send_message(message);
-    });
-
-    $('#create_new_room').on('click', function(){
-        on_create_new_room();
-    })
-
-    $('#approve').on('click', function(){
-        var invite = $('#invite_to_approve').val();
-        on_approve(invite);
-    })
-    
-    $('#generate_invite').on('click', function(){
-        on_generate_invite();
-    })
-
-    $('#hide_invite').on('click', function(){
-        $('#generated_invite_block').addClass('hidden');
-    })
-</script>
-
-</body>
-</html>
+</body></html>
