@@ -464,6 +464,13 @@ var
 USER,
 secure_chat_client;
 
+navigator.webkitPersistentStorage.requestQuota(5 * 1024 * 1024,
+function(bytes) {
+  $('#log').append('<b>info:</b>Allocated ' + bytes + ' bytes of persistant storage.<br>');
+},
+function(e) { alert('Failed to allocate space') });
+
+
 function moduleDidLoad() {
    secure_chat_client = document.getElementById('secure_chat_client');
    syslog('info:PNACL themis module loaded');
