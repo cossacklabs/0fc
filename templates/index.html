@@ -9,13 +9,7 @@
 
 	<meta name="viewport" content="width=device-width,initial-scale=1"/>
 
-	<link rel="stylesheet" type="text/css" href="cl.css"/>
-	<script type="text/javascript" src="cl.js"></script>
-
 </head><body class="stage1">
-
-
-
 
 
 <style>
@@ -63,8 +57,8 @@
 	.users p			{background:#fff; margin:2px 0 2px 0.5em; padding:1em 0.5em; font-size:0.8em;}
 
 
-	#chatinput			{border:2px #89f solid; margin:0.5em auto; padding-right:6em; box-sizing:border-box;}
-	#chatsubmit			{border:2px #89f solid; border-left:1px #aaa solid; width:6em; background:#eee; position:absolute; top:0.5em; right:1em; }
+	.chat .input input		{border:2px #89f solid; margin:0.5em auto; padding-right:6em; box-sizing:border-box;}
+	.chat .input button		{border:2px #89f solid; border-left:1px #aaa solid; width:6em; background:#eee; position:absolute; top:0.5em; right:1em; }
 
 
 
@@ -100,6 +94,12 @@
 
 .unload .auth				{left:0; visibility:visible;}
 
+
+	.log				{position:absolute; width:100%; padding:1em; top:-14em; left:0; right:0; height:12em; border-bottom:10px #531 solid;}
+	.log				{background:#000; color:#5c7; font-family:monospace; font-size:12px; line-height:1.5em;}
+	.log:hover			{top:0;}
+
+
 </style>
 
 
@@ -117,7 +117,7 @@
 
 
 
-	.preloader			{width:160px; height:3em; margin-left:-50px; bottom:0; left:50%; position:absolute}
+	.ani				{width:160px; height:3em; margin-left:-50px; bottom:0; left:50%; position:absolute}
 	.ani				{text-align: center;}
 
 	.ani b				{width:1em; height:1em; margin:0 0.75em; background:#abc; border-radius:100%; display: inline-block; -webkit-animation:ani-bounce 1.4s infinite ease-in-out both; animation:ani-bounce 1.4s infinite ease-in-out both;}
@@ -134,20 +134,20 @@
 	40%				{transform:scale(1)}
 }
 
-	.preloader			{visibility:hidden; transition:height ease-out 0.3s}
-.loading .preloader			{height:4em; visibility:visible;}
+	.ani				{visibility:hidden; transition:height ease-out 0.3s}
+.loading .ani				{height:4em; visibility:visible;}
 
 </style>
 
 
-<div class="preloader ani"><b class="s1"></b><b class="s2"></b><b class="s3"></b></div>
+<div class="ani"><b class="s1"></b><b class="s2"></b><b class="s3"></b></div>
 
 <div class="auth">
 
-	<form>
-		<p><input id="login" type="text" placeholder="Your email as authname"/></p>
-		<p><input id="password" type="password" placeholder="Your password"/></p>
-		<p><button onclick="on_login( document.getElementById('login').value, document.getElementById('password').value); return false; ">Login</button></p>
+	<form id="auth">
+		<p><input type="text" placeholder="Your email as authname"/></p>
+		<p><input type="password" placeholder="Your password"/></p>
+		<p><button type="submit">Login</button></p>
 	</form>
 
 </div>
@@ -158,13 +158,18 @@
 
 <div class="rooms" id="rooms"><div class="pad">
 
-	<p><a href="#" onclick="secure_chat_client.postMessage('create_new_room'); return false;">Add new room</a></p>
+	<p><a href="#" id="btn-room-add">Add new room</a></p>
 
-	<p>
 
-	<input type="text" name="invite" placeholder="paste invite" id="invite_to_approve"><button id="approve" onclick="secure_chat_client.postMessage('join_by_invite ' + document.getElementById('invite_to_approve').value ); return false;">Join</button>
+	<form id="newroom">
+		<!-- p><input type="text" placeholder="paste invite"/></p -->
+		<p><button type="submit">Add new room</button></p>
+	</form>
 
-	</p>
+	<form id="invite">
+		<p><input type="text" placeholder="paste invite"/></p>
+		<p><button type="submit">Join</button></p>
+	</form>
 
 
 
@@ -175,28 +180,25 @@
 <div class="chat">
 
 	<div id="iframe" class="iframe"></div>
-	<div class="input">
+	<div class="input"><form id="chatinput">
 
-		<input type="text" id="chatinput"/>
-		<button id="chatsubmit">Say!</button>
+		<input type="text"/>
+		<button type="submit">Say!</button>
 
-		<a href="#" onclick="_chatSay('While usability testing for user-centric applications has it\'s own distinct techniques, standards and frameworks, this is not so typical for a relatively complex and technical library aimed at developers and spanning multiple languages and platforms.'); return false;">I Say1</a>
-		<a href="#" onclick="_chatSay('The decision to make Themis an open source project brought with it the need to provide not just source code but also a bunch of high-level language wrappers, documentation, examples and to test the overall usability of these materials.'); return false;">I Say2</a>
-		<a href="#" onclick="_chatSay('We decided the best way to test this was to run a live test. What would it take to integrate Themis into a working mobile client / API server application? How much time? How much effort? Would it work? What would the developers think of the experience?'); return false;">I Say3</a>
-
-		<a href="#" onclick="_chatSay('While usability testing for user-centric applications has it\'s own distinct techniques, standards and frameworks, this is not so typical for a relatively complex and technical library aimed at developers and spanning multiple languages and platforms.','Oth3r_1'); return false;">Other Say1</a>
-		<a href="#" onclick="_chatSay('The decision to make Themis an open source project brought with it the need to provide not just source code but also a bunch of high-level language wrappers, documentation, examples and to test the overall usability of these materials.','Megatron'); return false;">Other Say2</a>
-		<a href="#" onclick="_chatSay('We decided the best way to test this was to run a live test. What would it take to integrate Themis into a working mobile client / API server application? How much time? How much effort? Would it work? What would the developers think of the experience?','n0tsy$stE///'); return false;">Other Say3</a>
-
-	</div>
+	</form></div>
 	<div class="users">
 
 		<p><a href="">user1</a></p>
 		<p><a href="">user2</a></p>
 		<p><a href="">user3</a></p>
 
+
+	<!-- form id="generate-invite">
+		<p><input type="text" placeholder="paste invite"/></p>
+		<p><button type="submit">Join</button></p>
+	</form -->
         <div class="row" style="margin-top: 2em;">
-            <button id="generate_invite" onclick="secure_chat_client.postMessage('generate_invite');return false;">Generate invite</button>
+            <button id="generate_invite" onclick="_client.postMessage('generate_invite');return false;">Generate invite</button>
         </div>
         <div class="row hidden" id="generated_invite_block">
             <input type="text" name="generated_invite" id="generated_invite" readonly="readonly">
@@ -219,172 +221,14 @@
 
 
 
-<script>
 
-	HTMLElement.prototype.classPerk = function(t,e){function s(t,e){for(var s=[],n={},r=t.length-1;r>-1;)!!t[r]&&!(e==t[r])&&!n[t[r]]&&s.unshift(t[r]),n[t[r--]]=1;return s}var t=t.split(" "),e=e||0,n=this.className.split(" ");if(0==e)n=s(n.concat(t));else if(-1==e)for(var r=t.length-1;r>-1;)n=s(n,t[r--]);else if(1==e)for(var r=t.length-1;r>-1;){var i=t[r--];n.indexOf(i)>-1?n=s(n,i):n.push(i)}else{e=e.split(" ");for(var r=e.length-1;r>-1;)n=s(n,e[r--]);n=s(n.concat(t))}this.className=n.join(" ");return this};
 
 
 
-	/* shortcuts */
 
-	function _body()  {
 
-		return document.getElementsByTagName('body')[0];
-	}
 
 
-
-
-
-
-
-	var
-	chatinput = document.getElementById('chatinput');
-	chatinput.onkeyup = function(e) {
-
-		if (13 === e.keyCode) {
-
-
-/* for test [ */
-var
-val = chatinput.value;
-setTimeout(function(){ 
-(function( v ){ _chatSay( ('This is auto reply... You just said: ' + v ) , 'System' ); })( val );}, 3000);
-/* ] for test */
-
-			_chatSubmit( chatinput );
-
-
-		}
-	};
-
-	chatinput.focus();
-
-
-	var
-	chatsubmit = document.getElementById('chatsubmit');
-	chatsubmit.onclick = function() {
-
-		_chatSubmit();
-	};
-
-
-
-
-	var
-	iframe		= document.getElementById('iframe')
-			. appendChild(  document.createElement('iframe') );
-
-			iframe.contentWindow.document.open();
-			iframe.contentWindow.document.write('<body></body>');
-			iframe.contentWindow.document.close();
-
-	var
-	chat		= iframe.contentWindow.document.getElementsByTagName('body')[0];
-
-	chat.content	= chat.appendChild( document.createElement('div') );
-
-
-	chat.parentNode
-			.appendChild( document.createElement('head') )
-			.appendChild( document.createElement('style') )
-			.appendChild( document.createTextNode(
-
-			  '*		{margin:0; padding:0;}'
-			+ 'body		{font-size:14px; font-family:Arial, helvetica; background:#fff}'
-			+ 'p		{padding:0.75em 1em; border:1px #fff solid; line-height:1.4em}'
-
-			+ '.me		{background:#e5e7f0; margin:0 1.5em 0 20%}'
-			+ '.me span	{display:block; color:#7a9; font-size:0.7em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
-
-			+ '.other	{background:#eee; margin-right:20%}'
-			+ '.other span	{display:block; color:#7a9; font-size:0.85em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
-
-			));
-
-
-
-
-
-
-
-
-			
-
-function _chatSubmit( a ) {
-
-	var
-	a = a || document.getElementById('chatinput');
-
-	secure_chat_client.postMessage('message <b>' + USER + ':</b> ' + a.value );
-	_chatSay( a.value );
-//alert(1);
-	a.value = '';
-	a.focus();
-
-	return false;
-}
-
-
-function _chatSay( a, n ) {
-
-	if(!a) return false;
-
-	var
-	p = document.createElement('p'),
-	s = document.createElement('span'),
-	t = new Date();
-
-	s.appendChild(document.createTextNode( 
-
-		t.getHours().toLocaleString('en-US', {minimumIntegerDigits:2})
-		+ ':'
-		+ t.getMinutes().toLocaleString('en-US', {minimumIntegerDigits:2})
-		+ ':'
-		+ t.getSeconds().toLocaleString('en-US', {minimumIntegerDigits:2})
-		+ ((n) ? ' ' + n : '')
-	));
-
-
-	p.className  = (!n) ? 'me' : 'other';
-
-	p.appendChild( document.createTextNode( a ) );
-	p.appendChild( s );
-
-	_chatUpdate( p );
-
-	return true;
-}
-
-
-function _chatUpdate( p ) {
-
-	if (!p) return false;
-
-	chat.content.appendChild( p );
-
-	_chatResize();
-
-	return true;
-}
-
-
-function _chatResize () {
-
-	chat.scrollTop = chat.offsetHeight;
-
-	chat.style.paddingTop = (iframe.offsetHeight - chat.content.offsetHeight) + 'px';
-}
-
-
-window.onresize = function() {
-
-	_chatResize();
-
-}
-
-
-</script>
 
 
 
@@ -428,6 +272,7 @@ window.onresize = function() {
 </style>
 
 <div class="demo">
+
 	<span style="color:#eee">DEMO:</span>
 	<a class="d1" href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Back to login if auth fails...</a>
 	<a class="d2"  href="#" style="color:#fc0" onclick="_body().classPerk('loading'); return false;">...checking login...</a>
@@ -443,135 +288,409 @@ window.onresize = function() {
 
 
 
-<style>
 
-#syslog			{position:absolute; width:400px; height:100px; left:-390px; top:20px; background:#fff; color:#080; border-right:8px #f00 solid}
-#syslog:hover		{left:0;}
 
-</style>
 
-<textarea id="syslog" >This is log...</textarea>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 <script>
 
-function syslog( m ) {
+	/* global shortcuts */
 
-	var l = document.getElementById('syslog');
-	l.value = m + '\n' +  l.value;
-}
+	function $( o ) {
 
-var
-USER,
-secure_chat_client;
+		return document.getElementById( o );
+	}
 
-navigator.webkitPersistentStorage.requestQuota(5 * 1024 * 1024,
-function(bytes) {
-  $('#log').append('<b>info:</b>Allocated ' + bytes + ' bytes of persistant storage.<br>');
-},
-function(e) { alert('Failed to allocate space') });
+	function _tags( t, o ) {
 
+		return (o || document).getElementsByTagName( t );
+	}
 
-function moduleDidLoad() {
-   secure_chat_client = document.getElementById('secure_chat_client');
-   syslog('info:PNACL themis module loaded');
-}
+	function _node( n ) {
 
-function handleMessage(message_event) {
-   msg=message_event.data;
-   command=msg[0];
-   args=msg.slice(1);
-
-   if (command == "available_chat_list")
-         {
-//	alert('wait');
-             var arr = msg[1].split(' ');
-        //     show_chat_list();
-	_body().classPerk('stage2 loaded', 'stage1 stage3 loading');
+		return document.createElement( n );
+	}
 
 
+	function _txt( n ) {
 
-var rooms = document.getElementById('rooms').childNodes[0];
-
-             for(var i = 0; i < arr.length; i++){
-
-
-var
-p = document.createElement('p'),
-a = document.createElement('a'),
-t = document.createTextNode( arr[i] );
-
-p.id=arr[i];
-a.href = "#";
-a.onclick = function() {
-
-    secure_chat_client.postMessage('open_room ' + this.innerHTML );
-    return false;
-}
+		return document.createTextNode( n );
+	}
 
 
-a.appendChild(t);
-p.appendChild(a);
-rooms.appendChild(p);
+	function _body() {
 
-             }
-         }
-         else if (command == "new_room")
-         {
-             secure_chat_client.postMessage("open_room "+msg[1]);
-         }
-         else if (command == "open_room")
-         {
-	//show_chat();
-	_body().classPerk('stage3');
-         }
-         else if (command == "invite")
-     {
-document.getElementById('generated_invite').value = args;
-//	show_generated_invite(args);
-         }
-         else if (command == "new_message")
-    {
-	_chatSay(args, 'other');
-//	add_message(args);		
-         }
-         else if (command == "remove_room")
-    {
+		return document.getElementsByTagName('body')[0];
+	}
 
-tmp = document.getElementById(args);
-//alert(tmp)
-	tmp.parentNode.removeChild( tmp );
-         }
-         else
-         {
-             syslog( command + ': ' + args );
-         }
-      }
-    
-function on_login(login, password){
 
-    USER = login;
-    secure_chat_client.postMessage("login "+login+" "+password);
-    //show_wait();
-    _body().classPerk('loading');
-}
+	function _now() {
+
+		var
+		t = new Date();
+
+		return (pad(t.getHours(), 2)
+		+ ':' + pad(t.getMinutes(), 2)
+		+ ':' + pad(t.getSeconds(), 2));
+	}
+
+
+	function pad( n, s ) {
+
+		return (1e15 + n + "").slice( -s );
+	}
+
+
+
+	var
+	chat,
+	USER,
+	iframe,
+	SYSLOG,
+	_client,
+	_command = {
+
+		 available_chat_list : function( m ) {
+
+			alert( m );
+			var arr = m[1].split(' ');
+			//     show_chat_list();
+			_body().classPerk('stage2 loaded', 'stage1 stage3 loading');
+
+
+
+			var rooms = $('rooms').childNodes[0];
+
+			for(var i = 0; i < arr.length; i++){
+
+
+				var
+				p = _node('p'),
+				a = _node('a'),
+				t = _txt( arr[i] );
+
+				p.id=arr[i];
+				a.href = "#";
+				a.onclick = function() {
+
+				    _client.postMessage('open_room ' + this.innerHTML );
+				    return false;
+				}
+
+
+				a.appendChild(t);
+				p.appendChild(a);
+				rooms.appendChild(p);
+	             	}
+		}
+
+		,new_room : function( m ) {
+
+			_client.postMessage('open_room ' + m[1]);
+		}
+
+		,open_room : function() {
+
+			_body().classPerk('stage3');
+		}
+
+		,invite : function( m ) {
+
+			$('generated_invite').value = m.slice(1);
+		}
+
+		,new_message : function( m ) {
+
+			_chatSay( m.slice(1) );
+		}
+
+		,remove_room : function( m ) {
+
+			var
+			r = $( m.slice(1) );
+			r.parentNode.removeChild( r );
+		}
+	};
+
+
+	HTMLElement.prototype.classPerk = function(t,e){function s(t,e){for(var s=[],n={},r=t.length-1;r>-1;)!!t[r]&&!(e==t[r])&&!n[t[r]]&&s.unshift(t[r]),n[t[r--]]=1;return s}var t=t.split(" "),e=e||0,n=this.className.split(" ");if(0==e)n=s(n.concat(t));else if(-1==e)for(var r=t.length-1;r>-1;)n=s(n,t[r--]);else if(1==e)for(var r=t.length-1;r>-1;){var i=t[r--];n.indexOf(i)>-1?n=s(n,i):n.push(i)}else{e=e.split(" ");for(var r=e.length-1;r>-1;)n=s(n,e[r--]);n=s(n.concat(t))}this.className=n.join(" ");return this};
+
+
+	iframe		= $('iframe')
+			. appendChild(  _node('iframe') );
+
+			iframe.contentWindow.document.open();
+			iframe.contentWindow.document.write('<body></body>');
+			iframe.contentWindow.document.close();
+
+
+	chat		= iframe.contentWindow.document.getElementsByTagName('body')[0];
+
+	chat.content	= chat.appendChild( _node('div') );
+
+
+	chat.parentNode
+			.appendChild( _node('head') )
+			.appendChild( _node('style') )
+			.appendChild( _txt(
+
+			  '*		{margin:0; padding:0;}'
+			+ 'body		{font-size:14px; font-family:Arial, helvetica; background:#fff}'
+			+ 'p		{padding:0.75em 1em; border:1px #fff solid; line-height:1.4em}'
+
+			+ '.me		{background:#e5e7f0; margin:0 1.5em 0 20%}'
+			+ '.me span	{display:block; color:#7a9; font-size:0.7em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
+
+			+ '.other	{background:#eee; margin-right:20%}'
+			+ '.other span	{display:block; color:#7a9; font-size:0.85em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
+
+			));
+
+
+	navigator.webkitPersistentStorage.requestQuota(5 * 1024 * 1024,
+		 function( b ) {
+
+			_log('info: Allocated ' + b + ' bytes of persistant storage');
+		 }
+		,function( e ) {
+			_log('Failed to allocate space');
+		}
+	);
+
+
+	/* nacl_module */
+
+	_client = _node('embed');
+	_client.setAttribute('type',		'application/x-pnacl');
+	_client.setAttribute('name',		'nacl_module');
+	_client.setAttribute('src',		'{{ static_resolver(filename="secure_chat.nmf") }}');
+	_client.setAttribute('url',		'{{ url }}');
+	_client.setAttribute('server_pub',	'{{ server_public_key }}');
+
+	_body().appendChild( _node('div') ).appendChild( _client );
+
+	_client.parentNode.className = 'listener';
+
+	_client.addEventListener('load', moduleLoaded, true);
+	_client.addEventListener('message', handleMessage, true);
+
+
+	function moduleLoaded() {
+
+		_log('info: PNACL themis module loaded');
+	}
+
+
+	function handleMessage( m ) {
+
+		var
+		m	= m.data,
+		cmd	= m[0],
+		args	= m.slice(1);
+
+		if (_command[ cmd ]) {
+
+			_command[ cmd ]( m );
+			return false;
+		}
+
+		_log( cmd + ': ' + args );
+	}
+
+
+
+	/* forms and buttons */
+
+	$('auth').onsubmit = function() {
+
+		var
+		i = _tags('input', this),
+		l = i[0].value,
+		p = i[1].value;
+
+		USER = l;
+
+		_client.postMessage('login ' + l + ' ' + p);
+
+		_body().className='stage1 loading';
+
+		return false;
+	};
+
+
+	$('newroom').onsubmit = function() {
+
+		_client.postMessage('create_new_room');
+
+		return false;
+	};
+
+
+	$('invite').onsubmit = function() {
+
+		var
+		i = _tags('input', this)[0];
+
+		_client.postMessage('join_by_invite ' + i.value );
+
+		return false;
+	};
+
+
+	$('chatinput').onsubmit = function() {
+
+		var
+		m,
+		i = _tags('input', this)[0];
+
+		if (i.value) {
+
+			m = _now() + ' ' + USER + ':: ' + i.value;
+			_client.postMessage('message ' + m );
+			_chatSay( m );
+		}
+
+		i.value = '';
+		i.focus();
+		m = null;
+
+		return false;
+	};
+
+
+	function _chatSay( a ) {
+
+		if (!a) return false;
+	
+		var
+		m = String(a).split('::'),
+		f = m[0].split(' '),
+		t = f[0], /* time */
+		n = f[1], /* name */
+
+		p = _node('p');
+		p.className  = ( USER == n ) ? 'me' : 'other';
+
+		p.appendChild( _txt( m[1] ) );
+		p.appendChild( _node('span'))
+		 .appendChild( _txt( 
+
+			t + (( USER !== n ) ? ' ' + n : '' )
+		));
+
+		_chatUpdate( p );
+
+		return true;
+	}
+
+
+	/* print message to chat frame */
+
+	function _chatUpdate( p ) {
+
+		if (!p) return false;
+
+		chat.content.appendChild( p );
+
+		_chatResize();
+
+		return true;
+	}
+
+
+	function _chatResize () {
+
+		chat.scrollTop = chat.offsetHeight;
+
+		chat.style.paddingTop = (iframe.offsetHeight - chat.content.offsetHeight) + 'px';
+	}
+
+
+	window.onresize = function() {
+
+		_chatResize();
+
+	}
+
+
+
+
+
+/* ========================================== */
+
+	/* system log */
+
+	function _log( m ) {
+
+		if(!m) return false;
+
+		SYSLOG = SYSLOG || _body().appendChild( _node('textarea') );
+		SYSLOG.className = 'log';
+		SYSLOG.value = m + '\n' +  SYSLOG.value;
+	}
+
+/* ========================================== */
+
 
 </script>
-  <div id="listener">
-    <script type="text/javascript">
-      var listener = document.getElementById('listener');
-      listener.addEventListener('message', handleMessage, true);
-      listener.addEventListener('load', moduleDidLoad, true);
-    </script>
-    <embed name="nacl_module"
-       id="secure_chat_client"
-       width="0" height="0"
-       src="{{ static_resolver(filename='secure_chat.nmf') }}"
-       url="{{ url }}"
-       server_pub="{{ server_public_key }}"
-       type="application/x-pnacl" />
-  </div>
-
-
-
 
 </body></html>
