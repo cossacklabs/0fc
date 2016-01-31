@@ -1,18 +1,18 @@
 /*
-* Copyright (c) 2015 Cossack Labs Limited
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright (c) 2015 Cossack Labs Limited
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 #include <cstdio>
 #include <string>
@@ -33,35 +33,42 @@
 #include "ppapi/cpp/var_array.h"
 #include "ppapi/utility/completion_callback_factory.h"
 #include "ppapi/utility/threading/simple_thread.h"
-#include "ppapi/cpp/websocket.h"
 #include "nacl_io/nacl_io.h"
 
 #include "helpers/base64.hpp"
-#include "pnacl_websocket_api.hpp"
 #include "pnacl_fileio_api.hpp"
-#include "themispp/secure_keygen.hpp"
-#include "themispp/secure_rand.hpp"
-
+#include "secure_chat_room.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <string>
 
-class secure_chat_instance : public pp::Instance, public pnacl::fileio_listener_t, public pnacl::web_socket_receive_listener{
+#define UI_STRING_PARAM(array, i) array.Get(i).AsString()
+#define UI_INT_PARAM(array, i) array.Get(i).AsInteger()
+
+#define STR_2_VEC(str) std::vector<uint8_t>((str).c_str(), (str).c_str()+(str).length())
+#define B64_2_VEC(str) helpers::base64_decode(str)
+
+
+class secure_chat_instance : public pp::Instance, public pnacl::fileio_listener_t{
 public:
   explicit secure_chat_instance(PP_Instance instance) : 
     pp::Instance(instance),
     store_(this,this),
-    socket_(this, this),
     url_(""),
-    user_name_(""){
-	nacl_io_init_ppapi(instance, pp::Module::Get()->get_browser_interface());
-    }
+    user_name_(""),
+    server_id_(""),
+    server_pub_("")    
+  {
+    nacl_io_init_ppapi(instance, pp::Module::Get()->get_browser_interface());
+  }
 
   virtual ~secure_chat_instance() {}
   
   virtual bool Init(uint32_t argc, const char * argn[], const char * argv[]) {
+    std::string server_id="";
+    std::string server_pub="";
     for(uint32_t i=0;i<argc;++i){
       if(strcmp(argn[i], "url")==0){
 	url_=argv[i];
@@ -69,26 +76,28 @@ public:
       if(strcmp(argn[i], "server_pub")==0){
 	server_pub_=argv[i];
       }
+      if(strcmp(argn[i], "server_id")==0){
+	server_id_=argv[i];
+      }      
     }
-    if(url_=="" || server_pub_==""){
+    if(url_=="" || server_pub_=="" || server_id_==""){
       return false;
     }
     return true;
   }
-  
+      
 private:
-  pnacl::websocket_api socket_;
   pnacl::fileio_api store_;
   std::string url_;
   std::string user_name_;
+  std::string server_id_;
   std::string server_pub_;
+  std::shared_ptr<pnacl::secure_chat_room_t> room_;
+  std::vector<std::string> invites_;
   std::vector<uint8_t> private_key_;
   std::vector<uint8_t> public_key_;
   std::string room_name_;
   std::vector<uint8_t>  room_key_;
-  std::vector<std::string> invites_;
-  themispp::secure_cell_seal* room_encrypter_;
-
 
 private:
   void on_new_room(const std::string& new_room_key){
@@ -96,10 +105,10 @@ private:
     store_.mk_sub_key(new_room_key);
     store_.save(new_room_key+"/pub", public_key_);
     store_.save(new_room_key+"/priv", private_key_);
-    themispp::secure_rand<32> rnd;
+    themispp::secure_rand_t<32> rnd;
     room_key_=rnd.get();
     store_.save(new_room_key+"/key", room_key_);
-    room_encrypter_=new themispp::secure_cell_seal(room_key_);
+    //room_encrypter_=new themispp::secure_cell_seal(room_key_);
     post("new_room", new_room_key);
   }
 
@@ -110,9 +119,9 @@ private:
   
   void on_room_load(){
     if(!public_key_.empty() && !private_key_.empty() && !room_key_.empty()){
-      room_encrypter_=new themispp::secure_cell_seal(room_key_);
-      socket_.send(std::string("PUBKEY ")+webthemispp::base64_encode(public_key_));
-      socket_.send(std::string("OPENROOM ")+room_name_);
+      //      room_encrypter_=new themispp::secure_cell_seal_t(room_key_);
+      //socket_.send(std::string("PUBKEY ")+webthemispp::base64_encode(public_key_));
+      //socket_.send(std::string("OPENROOM ")+room_name_);
     }
   }
 
@@ -121,7 +130,7 @@ private:
     post("remove_room", room_name);
   }
 public:  
-  virtual void on_receive(const std::string& data){
+  /*  virtual void on_receive(const std::string& data){
     std::string command;
     std::istringstream st(data);
     postInfo(data);
@@ -168,15 +177,13 @@ public:
       postError("receive malformed response from server");
     }
   }
-  virtual void on_connect(){
-    postInfo("connected to server");
-  }
-  virtual void on_error(int32_t code, const std::string& reason){
+
+  virtual void on_error(const std::string& reason){
     post("connection_lost", "reconnecting...");
     postError("connecion lost");
     socket_.open(url_);
   }
-  
+  */
 public:
   virtual void on_open(const int32_t error_code, const std::string& chat_list){
     if(error_code!=PNACL_IO_SUCCESS){
@@ -209,16 +216,14 @@ public:
       postError("storage error");
   }
 private:
-  void create_new_room()
+  void room_create(const std::string& name)
   {
-    themispp::key_pair_generator_t<themispp::EC> gen;
-    public_key_=gen.get_pub();
-    private_key_=gen.get_priv();
-    socket_.send(std::string("PUBKEY ")+webthemispp::base64_encode(gen.get_pub()));
-    socket_.send(std::string("NEWROOM"));
+    room_=std::shared_ptr<pnacl::secure_chat_room_t>(new pnacl::secure_chat_room_t(ppinstance, STR_2_VEC(server_id_), B64_2_VEC(server_pub_), name));
+    //    socket_.send(std::string("PUBKEY ")+webthemispp::base64_encode(gen.get_pub()));
+    //    socket_.send(std::string("NEWROOM"));
   }
 
-  void open_room(const std::string& room_to_open){
+  void room_open(const std::string& room_to_open){
     room_name_=room_to_open;
     postInfo(room_to_open);
     public_key_.clear();
@@ -229,55 +234,49 @@ private:
     store_.load(room_to_open+"/key");
   }
 
-  void generate_invite()
+  void invite_generate()
   {
-    themispp::secure_rand<32> rnd;
+    /*    themispp::secure_rand<32> rnd;
     std::vector<uint8_t> new_invite=rnd.get();
     //store_.save(room_name_+"/"+webthemispp::base64_encode(new_invite), std::vector<uint8_t>(0));
     invites_.push_back(webthemispp::base64_encode(new_invite));
     post("invite", room_name_+" "+webthemispp::base64_encode(public_key_)+" "+webthemispp::base64_encode(new_invite));
-  }
+    */  }
 
-  void join_by_invite(const std::string& room_name, const std::string& invite_owner_pub_key, const std::string& invite){
-    themispp::key_pair_generator_t<themispp::EC> gen;
+  void room_open_by_invite(const std::string& room_name, const std::string& invite){
+    /*    themispp::key_pair_generator_t<themispp::EC> gen;
     public_key_=gen.get_pub();
     private_key_=gen.get_priv();
     post("pub_key",webthemispp::base64_encode(public_key_));
     socket_.send(std::string("PUBKEY ")+webthemispp::base64_encode(public_key_));
     socket_.send("INVITE "+webthemispp::base64_encode(public_key_)+" "+room_name+" "+invite_owner_pub_key+" "+invite);
-  }
+    */  }
   
 public:
   virtual void HandleMessage(const pp::Var& var_message) {
-    if (!var_message.is_string()){
+    if (!var_message.is_array()){
       postError("non string messages not supported");
       return;
     }
-    std::istringstream message(var_message.AsString());
-    std::string operation;
-    message>>operation;
-    if (operation == "login"){
-      std::string password;
-      message>>user_name_>>password;
-      store_.open(webthemispp::base64_encode((uint8_t*)((url_+user_name_).c_str()), (url_+user_name_).length()), password);
-      socket_.open(url_);
-    } else if (operation == "create_new_room"){
-      create_new_room();
-    }else if (operation == "open_room"){
-      std::string room_to_open;
-      message>>room_to_open;
-      open_room(room_to_open);
-    }else if (operation == "generate_invite"){
-      generate_invite();
-    }else if (operation == "join_by_invite"){
-      std::string room_name, invite_owner_pub_key, invite;
-      message>>room_name>>invite_owner_pub_key>>invite;
-      join_by_invite(room_name, invite_owner_pub_key, invite);
-    }else if (operation == "message"){
-      std::string m=message.str().substr(8,message.str().length()-1+8);
-      socket_.send("MESSAGE "+room_name_+" "+webthemispp::base64_encode(room_encrypter_->encrypt(std::vector<uint8_t>(m.c_str(), m.c_str()+m.length()+1)).get()));
+    const pp::VarArray params(var_message);
+    if (UI_STRING_PARAM(params,0) == "login"){ //username, password 
+      store_.open(webthemispp::base64_encode(STR_2_VEC(url_+UI_STRING_PARAM(params,1))), UI_STRING_PARAM(params,2));
+    } else if (UI_STRING_PARAM(params,0) == "room.create"){ //room_name
+      room_create(UI_STRING_PARAM(params,1));
+    }else if (UI_STRING_PARAM(params,0) == "room.open"){ //room_name
+      room_open(UI_STRING_PARAM(params,1));
+    }else if (UI_STRING_PARAM(params,0) == "room.invite.generate"){
+      invite_generate();
+    }else if (UI_STRING_PARAM(params,0) == "room.open_by_invite"){ //room_name, invite
+      //      std::string room_name, invite_owner_pub_key, invite;
+      //      message>>room_name>>invite_owner_pub_key>>invite;
+      room_open_by_invite(UI_STRING_PARAM(params,1), UI_STRING_PARAM(params,2));
+    }else if (UI_STRING_PARAM(params,0) == "message.send"){ // room, message
+      room_message_send(UI_STRING_PARAM(params,1), UI_STRING_PARAM(params,2));
+      //      std::string m=message.str().substr(8,message.str().length()-1+8);
+      //socket_.send("MESSAGE "+room_name_+" "+webthemispp::base64_encode(room_encrypter_->encrypt(std::vector<uint8_t>(m.c_str(), m.c_str()+m.length()+1)).get()));
     }else
-      postError(std::string("openation <i>")+operation+"</i> not supported");
+      postError(std::string("openation "+operation+" not supported");
   }
 
 private:
@@ -311,7 +310,7 @@ public:
 };
 
 namespace pp {
-    Module* CreateModule() {
-	return new secure_chat_module();
-    }
+  Module* CreateModule() {
+    return new secure_chat_module();
+  }
 } // namespace pp

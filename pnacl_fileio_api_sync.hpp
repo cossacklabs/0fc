@@ -14,16 +14,14 @@
  * limitations under the License.
  */
 
-#ifndef _PNACL_FILEIO_API_HPP_
-#define _PNACL_FILEIO_API_HPP_
+#ifndef _PNACL_FILEIO_API_SYNC_HPP_
+#define _PNACL_FILEIO_API_SYNC_HPP_
 
 #include "ppapi/c/ppb_file_io.h"
 #include "ppapi/cpp/directory_entry.h"
 #include "ppapi/cpp/file_io.h"
 #include "ppapi/cpp/file_ref.h"
 #include "ppapi/cpp/file_system.h"
-#include "ppapi/cpp/instance.h"
-
 
 #include "themispp/exception.hpp"
 #include "themispp/secure_cell.hpp"
@@ -42,25 +40,12 @@
 
 
 namespace pnacl {
-
-  class fileio_listener_t{
-  public:
-    virtual void on_open(const int32_t error_code, const std::string& list)=0;
-    virtual void on_load(const int32_t error_code, const std::string& key, const std::vector<uint8_t>& data)=0;
-    virtual void on_save(const int32_t error_code)=0;
-  };
   
-  class fileio_api{
+  class fileio_api_sync{
   public:
-    fileio_api(pp::Instance *instance, fileio_listener_t *listener):
-      instance_(instance),
-      file_system_(instance, PP_FILESYSTEMTYPE_LOCALPERSISTENT),
-      callback_factory_(this),
-      file_thread_(instance),
-      file_system_ready_(false),
+    fileio_api():
       encrypter_(NULL),
-      user_name_(""),
-      listener_(listener)
+      user_name_("")
     {}
     
     virtual ~fileio_api(){
@@ -71,8 +56,8 @@ namespace pnacl {
     void open(const std::string& user_name, const std::string& password){
       user_name_=user_name;
       try{
-	encrypter_=new themispp::secure_cell_seal_t(std::vector<uint8_t>(password.data(), password.data()+password.length()));
-      }catch(themispp::exception_t& e){
+	encrypter_=new themispp::secure_cell_seal(std::vector<uint8_t>(password.data(), password.data()+password.length()));
+      }catch(themispp::exception& e){
 	listener_->on_open(PNACL_IO_LOAD_ERROR,"");
 	return;
       }
@@ -166,8 +151,8 @@ namespace pnacl {
 	listener_->on_save(PNACL_IO_STORAGE_NOT_READY_ERROR);
       std::vector<uint8_t> enc_data;
       try{
-	enc_data=encrypter_->encrypt(context);
-      }catch(themispp::exception_t& e){
+	enc_data=encrypter_->encrypt(context).get();
+      }catch(themispp::exception& e){
 	listener_->on_save(PNACL_IO_SAVE_ERROR);
       }
       pp::FileRef ref(file_system_, (std::string("/")+user_name_+"/"+file_name).c_str());
@@ -193,10 +178,10 @@ namespace pnacl {
 	std::vector<uint8_t> data(info.size);
 	if(file.Read(0, (char*)(&data[0]), data.size(), pp::BlockUntilComplete())==data.size())
 	  try{
-	    data=encrypter_->decrypt(data);
+	    data=encrypter_->decrypt(data).get();
 	    listener_->on_load(PNACL_IO_SUCCESS, file_name, data);
 	    return;
-	  }catch(themispp::exception_t& e){
+	  }catch(themispp::exception& e){
 	    listener_->on_load(PNACL_IO_INVALID_PASSWORD_ERROR, file_name, std::vector<uint8_t>(0));
 	    return;
 	  }
@@ -213,7 +198,7 @@ namespace pnacl {
     bool file_system_ready_;
     pp::SimpleThread file_thread_;
     std::string user_name_;
-    themispp::secure_cell_seal_t* encrypter_;
+    themispp::secure_cell_seal* encrypter_;
     fileio_listener_t *listener_;
   };
   

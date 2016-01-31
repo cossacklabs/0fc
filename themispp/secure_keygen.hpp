@@ -14,8 +14,8 @@
 * limitations under the License.
 */
 
-#ifndef SECURE_KEYGEN_HPP
-#define SECURE_KEYGEN_HPP
+#ifndef THEMISPP_SECURE_KEYGEN_HPP_
+#define THEMISPP_SECURE_KEYGEN_HPP_
 
 #include <cstring>
 #include <vector>
@@ -26,40 +26,44 @@
 
 namespace themispp{
 
-    enum asym_algs {EC, RSA};
+  enum asym_algs {EC, RSA};
 
 
-    template <asym_algs alg_t_p, size_t max_key_length_t_p = MAX_KEY_LENGTH>
-    class key_pair_generator_t{
-    public:
-	key_pair_generator_t():
-	    private_key(max_key_length_t_p),
-	    public_key(max_key_length_t_p){
-	    size_t private_key_length=max_key_length_t_p;
-	    size_t public_key_length=max_key_length_t_p;
-	    switch(alg_t_p){
-		case EC:
-		    if(themis_gen_ec_key_pair(&private_key[0], &private_key_length, &public_key[0], &public_key_length)!=THEMIS_SUCCESS)
-			throw themispp::exception("EC key pair generation failure");
-		    break;
-		case RSA:
-		    if(themis_gen_rsa_key_pair(&private_key[0], &private_key_length, &public_key[0], &public_key_length)!=THEMIS_SUCCESS)
-			throw themispp::exception("RSA key pair generation failure");
-		    break;
-		default:
-		    throw themispp::exception("key pair generation failure (unsupported algorithm)");
-	    }
-	    private_key.resize(private_key_length);
-	    public_key.resize(private_key_length);
-	}
+  template <asym_algs alg_t_p, size_t max_key_length_t_p = MAX_KEY_LENGTH>
+  class secure_key_pair_generator_t{
+  public:
+    secure_key_pair_generator_t():
+      private_key(max_key_length_t_p),
+      public_key(max_key_length_t_p){
+      gen();
+    }
+    
+    void gen(){
+      size_t private_key_length=max_key_length_t_p;
+      size_t public_key_length=max_key_length_t_p;
+      switch(alg_t_p){
+      case EC:
+	if(themis_gen_ec_key_pair(&private_key[0], &private_key_length, &public_key[0], &public_key_length)!=THEMIS_SUCCESS)
+	  throw themispp::exception_t("EC key pair generation failure");
+	break;
+      case RSA:
+	if(themis_gen_rsa_key_pair(&private_key[0], &private_key_length, &public_key[0], &public_key_length)!=THEMIS_SUCCESS)
+	  throw themispp::exception_t("RSA key pair generation failure");
+	break;
+      default:
+	throw themispp::exception_t("key pair generation failure (unsupported algorithm)");
+      }
+      private_key.resize(private_key_length);
+      public_key.resize(private_key_length);
+    }
+      
+    const std::vector<uint8_t>& get_priv(){return private_key;}
+    const std::vector<uint8_t>& get_pub(){return public_key;}
 
-	const std::vector<uint8_t>& get_priv(){return private_key;}
-	const std::vector<uint8_t>& get_pub(){return public_key;}
-
-    private:
-	std::vector<uint8_t> private_key;
-      std::vector<uint8_t> public_key;
-    };
+  private:
+    std::vector<uint8_t> private_key;
+    std::vector<uint8_t> public_key;
+  };
 
 }// ns themis
 

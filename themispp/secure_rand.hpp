@@ -14,6 +14,9 @@
 * limitations under the License.
 */
 
+#ifndef THEMISPP_SECURE_RAND_HPP_
+#define THEMISPP_SECURE_RAND_HPP_
+
 #include <vector>
 #include <themis/themis.h>
 #include "exception.hpp"
@@ -21,9 +24,9 @@
 namespace themispp{
 
     template <size_t block_length_t_p>
-    class secure_rand{
+    class secure_rand_t{
 	public:
-	    secure_rand():
+	    secure_rand_t():
 		n_(block_length_t_p, 0){}
 
 	    std::vector<uint8_t>& get(){
@@ -34,3 +37,5 @@ namespace themispp{
 	    std::vector<uint8_t> n_;
     };
 }//themis
+
+#endif

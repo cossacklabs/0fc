@@ -14,24 +14,17 @@
 * limitations under the License.
 */
 
-#ifndef THEMISPP_EXCEPTION_HPP
-#define THEMISPP_EXCEPTION_HPP
+#ifndef THEMISPP_EXCEPTION_HPP_
+#define THEMISPP_EXCEPTION_HPP_
 
 #include <stdexcept>
 
 namespace themispp{
-    class exception: public std::runtime_error{
+    class exception_t: public std::runtime_error{
 	public:
-	explicit exception(const char* what):
+	explicit exception_t(const char* what):
 	    std::runtime_error(what){}
     };
-
-    class buffer_too_small_exception: public themispp::exception{
-	public:
-	explicit buffer_too_small_exception(const char* what):
-	    themispp::exception(what){}
-    };
-
-}//themis ns
+}//themispp ns
 
 #endif

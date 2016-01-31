@@ -21,7 +21,7 @@
 #include <string>
 #include "ppapi/cpp/var.h"
 #include "ppapi/cpp/var_array_buffer.h"
-#include "ppapi/utility/websocket/websocket_api.h"
+#include "ppapi/cpp/websocket.h"
 
 namespace pnacl{
   

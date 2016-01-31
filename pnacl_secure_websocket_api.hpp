@@ -19,35 +19,104 @@
 
 #include "themispp/secure_session.hpp"
 #include "pnacl_websocket_api.hpp"
+#include "helpers/base64.hpp"
 
 namespace pnacl {
 
-  class secure_websocket_api{
+  class callback: public themispp::secure_session_callback_interface_t{
   public:
-    secure_websocket_api(pp::Instance* ppinstance, const std::vector<uint8_t>& server_pub_key, web_socket_receive_listener* recv_listener):
+    callback(const std::vector<uint8_t>& server_id, const std::vector<uint8_t>& server_pub_key):
+      server_id_(server_id),
+      server_public_key_(server_pub_key){}
+    virtual const std::vector<uint8_t> get_pub_key_by_id(const std::vector<uint8_t>& id){
+      if(id==server_id_)
+	return server_public_key_;
+      return std::vector<uint8_t>(0);
+    }
+  private:
+    std::vector<uint8_t> server_id_;
+    std::vector<uint8_t> server_public_key_;
+  };
+  
+  class secure_websocket_api: public web_socket_receive_listener {
+  private:
+    typedef std::function<void()> connect_callback_t;
+    typedef std::function<void(const std::string&)> error_callback_t;
+    typedef std::function<void(const std::string&)> receive_callback_t;
+    
+    
+  public:
+    secure_websocket_api(const std::vector<uint8_t>& server_id,
+			 const std::vector<uint8_t>& server_pub_key,
+			 pp::Instance* ppinstance,
+			 receive_callback_t on_receive_,
+			 error_callback_t on_error_):
       socket_(ppinstance, this),
-      receive_listener_(recv_listener){}
+      receive_listener_(recv_listener),
+      callback_(server_id, server_pub_key),
+      session_(NULL),
+      receive_callback_(on_receive_),
+      error_callback_(on_error_)
+    {}
 
     ~secure_websocket_api(){}
 
 
-    void open(const std::string& url){
-	receive_listener_->on_error(res, "socket_.Connect");
+    void open(const std::string& url,
+	      const std::vector<uint8_t>& id,
+	      const std::vector<uint8_t>& priv_key,
+	      connect_callback_t on_connect){
+      connect_callback_=on_connect;
+      try{
+	session_ = std::shared_ptr<themispp::secure_session_t>(new themispp::secure_session_t(id, priv_key, &callback_));
+	socket_.open(url);
+      }catch (themispp::exception_t& e){
+	error_callback_(e.what());
+      }
     }
     
     void send(const std::string& data) {
-      socket_.send(data);
+      try{
+	socket_.send(helpers::base64_encode(session_->wrap(std::vector<uint8_t>(data.c_str(), data.c_str()+data.length()))));
+      }catch(themispp::exception_t& e){
+	error_callback_(e.what());
+      }
     }
 
-    void receive(){
-      int32_t res=socket_.ReceiveMessage(&received_data_, callback_factory_.NewCallback(&websocket_api::receive_handler));
-      if(res!=PP_OK_COMPLETIONPENDING)
-	receive_listener_->on_error(res, "socket_.ReceiveMessage");
+    virtual void on_receive(const std::string& data){
+      try{
+	std::vector<uint8_t> d=session_->unwrap(helpers::base64_decode(data));
+	if(session_->is_established())
+	  socket_.send(helpers::base64_encode(session_->init()));
+	else if(d.size()==0)
+	  connect_callback_();
+	else
+	  receive_callback_(std::string((const char*)(&d[0]), d.size()));
+      }catch(themispp::exception_t& e){
+	error_callback_(e.what());
+      }
     }
-
+    
+    virtual void on_connect(){
+      try{
+	socket_.send(helpers::base64_encode(session_->init()));
+      }catch(themispp::exception_t& e){
+	error_callback_(e.what());
+      }
+    }
+    
+    virtual void on_error(int32_t code, const std::string& reason){\
+      error_callback_(reason);
+    }
+    
   private:
     websocket_api socket_;
     web_socket_receive_listener* const receive_listener_;
+    callback callback_;
+    std::shared_ptr<themispp::secure_session_t> session_;
+    connect_callback_t connect_callback_;
+    error_callback_t error_callback_;
+    receive_callback_t receive_callback_;
   };
   
 } //end pnacl

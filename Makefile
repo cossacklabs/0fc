@@ -70,7 +70,7 @@ clean:
 	$(RM) *.pexe *.bc
 
 secure_chat.bc: libressl themis secure_chat.cc
-	$(PNACL_CXX) -o $@ secure_chat.cc -O2 $(CXXFLAGS) $(LDFLAGS) libs-bin/libthemis.a libs-bin/libsoter.a libs-bin/libcrypto.a getentropy_pnacl.cc
+	$(PNACL_CXX)  -std=gnu++11 -stdlib=libc++ -o $@ secure_chat.cc -O2 $(CXXFLAGS) $(LDFLAGS) libs-bin/libthemis.a libs-bin/libsoter.a libs-bin/libcrypto.a getentropy_pnacl.cc
 
 secure_chat.pexe: secure_chat.bc
 	$(PNACL_FINALIZE) -o static/$@ $<
