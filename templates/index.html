@@ -9,9 +9,6 @@
 
 	<meta name="viewport" content="width=device-width,initial-scale=1"/>
 
-</head><body class="stage1">
-
-
 <style>
 
 	*				{
@@ -44,17 +41,28 @@
 
 	.rooms				{position:absolute; overflow-y:scroll; width:100%; background:#b6c8db; top:0; left:0; right:0; bottom:0; visibility:hidden;}
 	.rooms .pad			{width:100%;}
-	.rooms p			{width:100%; max-width:24em; height:100%; height:4em; margin:1px auto 0 auto; background:#cbe1f5;}
+	.rooms p			{width:100%; max-width:24em; margin:1px auto 0 auto; }
 
 
+	#rooms				{width:100%; max-width:24em; margin:0 auto; background:#cbe1f5;}
+
+	#rooms p			{border-top:1px #b6c8db solid; margin:0 1.4em; font-size:0.75em; width:auto; max-width:none}
+	#rooms p:first-child		{border:none;}
+	#rooms p a			{display:block; position:relative; border:1px transparent solid; padding:1em 1.5em; margin:-1px -1.5em; color:#89a; text-decoration:none;}
+	#rooms p b			{display:block; font-size:1.25em; font-weight:normal; color:#567; line-height:1.5em;}
+	#rooms p a:hover		{color:#789; border:1px #d3eaff solid; background:#d3eaff; z-index:1;}
+	#rooms p.sel a			{border:1px #f5f7f8 solid; background:#f5f7f8; z-index:2;}
+	#rooms p.sel a			{transition:border-color ease-out 0.3s, background ease-out -0.3s;}
 
 	iframe				{position:absolute; width:100%; height:100%;}
-	.chat				{position:absolute; width:100%; height:100%; background:#aea; ftop:-30%; visibility:hidden;}
+	.chat				{position:absolute; width:100%; height:100%; background:#aea; visibility:hidden; z-index:3;}
 	.chat .iframe			{position:absolute; bottom:6em; top:0; left:0; right:16em;}
 	.chat .input			{position:absolute; height:6em; bottom:0; left:0; right:16em; background:#aab; padding:0 1em; box-sizing:border-box;}
 	.chat .users			{position:absolute; height:100%; width:16em; right:0; overflow-y:auto; background:#e2e4e8; }
 
 	.users p			{background:#fff; margin:2px 0 2px 0.5em; padding:1em 0.5em; font-size:0.8em;}
+	.users a			{text-decoration:none;}
+	.users .me			{font-weight:bold;}
 
 
 	.chat .input input		{border:2px #89f solid; margin:0.5em auto; padding-right:6em; box-sizing:border-box;}
@@ -76,15 +84,15 @@
 	.rooms				{opacity:1; left:0; transition:left ease-out 0.3s, bottom ease-out 0.3s, background ease-out 0.3s;}
 .stage1.loading .rooms			{bottom:7em; background:#abc;}
 
- 	.rooms .pad			{opacity:1; margin:2em 0 0 0; transition:opacity ease-out 0.3s, margin ease-out 0.3s}
-.stage1.loading .rooms .pad		{opacity:0; margin:4em 0 0 0; }
+ 	.rooms .pad			{opacity:1; margin:0 0 0 0; transition:opacity ease-out 0.3s, margin ease-out 0.3s}
+.stage1.loading .rooms .pad		{opacity:0; margin:2em 0 0 0; }
 
 
 
 
 .stage2 .chat				{visibility:visible;}
 .stage2 .chat				{left:100%; opacity:0.5; transition:left ease-out 0.3s, opacity ease-out 0.3s;}
-.stage2.stage3 .rooms .pad		{margin:2em 0 0 -5em;}
+.stage2.stage3 .rooms .pad		{margin:0 0 0 -5em;}
 .stage2.stage3 .chat			{left:0; opacity:1;}
 
 
@@ -95,7 +103,7 @@
 .unload .auth				{left:0; visibility:visible;}
 
 
-	.log				{position:absolute; width:100%; padding:1em; top:-14em; left:0; right:0; height:12em; border-bottom:10px #531 solid;}
+	.log				{position:absolute; width:100%; padding:1em; top:-14em; left:0; right:0; height:12em; border-bottom:10px #531 solid; z-index:9999;}
 	.log				{background:#000; color:#5c7; font-family:monospace; font-size:12px; line-height:1.5em;}
 	.log:hover			{top:0;}
 
@@ -140,6 +148,59 @@
 </style>
 
 
+
+
+<style>
+
+
+	.btn-01,
+	.btn-02,
+	.btn-03,
+	.btn-04,
+	.btn-05,
+	.btn-06,
+	.btn-07,
+	.btn-08,
+	.btn-09				{opacity:0.75; transition:opacity ease-out 0.2s}
+
+	.btn-01:hover,
+	.btn-02:hover,
+	.btn-03:hover,
+	.btn-04:hover,
+	.btn-05:hover,
+	.btn-06:hover,
+	.btn-07:hover,
+	.btn-08:hover,
+	.btn-09:hover			{opacity:0.99;}
+
+	.btn-01,
+	.btn-02,
+	.btn-03				{
+					 width:3em; height:3em; margin:1em 0.5em; padding:0; 
+					 border:1px #78a solid; border-radius:50%;
+					 background:transparent; cursor:pointer;
+					}
+
+	.btn-01				{float:right; border-color:#656f79;}
+	.btn-02				{float:right; border-color:#b76;}
+	.btn-03				{}
+
+	.btn-01:after			{content:'✖'; color:#656f79; font-size:1em; line-height:0;}
+	.btn-02:after			{content:'✖'; color:#b76; font-size:1em; line-height:0;}
+	.btn-03:after			{content:'≣'; color:#78a; font-size:2em; line-height:0.7em;}
+
+
+
+	#room-new			{padding:3em 0 0 0;}
+	.rooms form			{margin:1em 0;}
+	.rooms form p			{height:auto;}
+</style>
+
+<!-- ⬅  ✖ ➜ ✔ ➜ te ᐊ ← ≣ -->
+
+
+</head><body class="stage1">
+
 <div class="ani"><b class="s1"></b><b class="s2"></b><b class="s3"></b></div>
 
 <div class="auth">
@@ -152,26 +213,21 @@
 
 </div>
 
+<div class="rooms"><div class="pad">
 
+	<button id="rooms-logout" type="button" class="btn-01"></button>
 
-
-
-<div class="rooms" id="rooms"><div class="pad">
-
-	<p><a href="#" id="btn-room-add">Add new room</a></p>
-
-
-	<form id="newroom">
-		<!-- p><input type="text" placeholder="paste invite"/></p -->
-		<p><button type="submit">Add new room</button></p>
+	<form id="room-new">
+		<p><input type="text" placeholder="Room name"/></p>
+		<p><button type="submit">Create new room</button></p>
 	</form>
 
-	<form id="invite">
-		<p><input type="text" placeholder="paste invite"/></p>
+	<form id="room-invite">
+		<p><input type="text" placeholder="Paste invite"/></p>
 		<p><button type="submit">Join</button></p>
 	</form>
 
-
+	<div id="rooms"></div>
 
 </div></div>
 
@@ -180,7 +236,7 @@
 <div class="chat">
 
 	<div id="iframe" class="iframe"></div>
-	<div class="input"><form id="chatinput">
+	<div class="input"><form id="chat-input">
 
 		<input type="text"/>
 		<button type="submit">Say!</button>
@@ -188,117 +244,27 @@
 	</form></div>
 	<div class="users">
 
-		<p><a href="">user1</a></p>
-		<p><a href="">user2</a></p>
-		<p><a href="">user3</a></p>
+		<form id="chat-menu">
+			<button type="button" class="btn-02"></button>
+			<button type="button" class="btn-03"></button>
+		</form>
 
+		<form id="chat-invite">
+			<p><button type="submit">Generate Invite</button></p>
+			<p><input type="text" readonly="readonly" placeholder="Click the button above to generate invite..."/></p>
+		</form>
 
-	<!-- form id="generate-invite">
-		<p><input type="text" placeholder="paste invite"/></p>
-		<p><button type="submit">Join</button></p>
-	</form -->
-        <div class="row" style="margin-top: 2em;">
-            <button id="generate_invite" onclick="_client.postMessage('generate_invite');return false;">Generate invite</button>
-        </div>
-        <div class="row hidden" id="generated_invite_block">
-            <input type="text" name="generated_invite" id="generated_invite" readonly="readonly">
-            <a href="javascript:;" id="hide_invite">Hide</a>
-        </div>
-
+		<div id="users">
+<!--
+			<p><a href="#" onclick="_userRemove( 'aa' );return false;">Ruser1</a></p>
+			<p><a href="#" onclick="_userAdd( 'aa' );return false;">user2</a></p>
+			<p><a href="#" onclick="_userAdd( 'aa' );return false;">user3</a></p>
+-->
+		</div>
 
 	</div>
 
 </div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-<style>
-
-		.demo		{position:absolute; width:50%; bottom:0; left:50%; padding:1.5em; background:#000; font-size:11px; font-weight:bold; z-index:10000;}
-		.demo a		{padding:0 1em;}
-
-		.d1,
-		.d3,
-		.d4,
-		.d5,
-		.d6		{display:none;}
-
-.loading	.d1,
-.loading	.d3		{display:inline;}
-.loading	.d2		{display:none}
-
-.stage2		.d4,
-.stage2		.d5		{display:inline;}
-.stage2		.d2		{display:none;}
-
-
-.stage3		.d4		{display:none;}
-.stage3		.d3		{display:inline;}
-
-.unload		.d1,
-.unload		.d2,
-.unload		.d3,
-.unload		.d4,
-.unload		.d5		{display:none;}
-.unload		.d6		{display:inline;}
-
-</style>
-
-<div class="demo">
-
-	<span style="color:#eee">DEMO:</span>
-	<a class="d1" href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Back to login if auth fails...</a>
-	<a class="d2"  href="#" style="color:#fc0" onclick="_body().classPerk('loading'); return false;">...checking login...</a>
-
-	<a class="d5"  href="#" style="color:#fc0" onclick="_body().classPerk('unload'); return false;">Logout</a>
-	<a class="d6"  href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Reset</a>
-
-	<a class="d3"  href="#" style="color:#fc0" onclick="_body().classPerk('stage2 loaded', 'stage1 stage3 loading'); return false;">Show rooms</a>
-	<a class="d4"  href="#" style="color:#fc0" onclick="_body().classPerk('stage3'); return false;">Chat</a>
-
-</div>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
@@ -396,7 +362,7 @@
 
 	function pad( n, s ) {
 
-		return (1e15 + n + "").slice( -s );
+		return (1e15 + n + '').slice( -s );
 	}
 
 
@@ -407,21 +373,36 @@
 	iframe,
 	SYSLOG,
 	_client,
+	USERS = [],
+	_mstyle = {
+
+		 ME	: 'me'
+		,SYSTEM	: 'system'
+	},
 	_command = {
 
 		 available_chat_list : function( m ) {
 
-			alert( m );
-			var arr = m[1].split(' ');
-			//     show_chat_list();
-			_body().classPerk('stage2 loaded', 'stage1 stage3 loading');
+			/* for security reasons */
 
+			(function() {
 
+				var
+				i = _tags('input', $('auth')),
+				r =  String( Math.random() ).slice(2);
 
-			var rooms = $('rooms').childNodes[0];
+				i[0].name = 'l' + r;
+				i[1].name = 'I' + r;
 
-			for(var i = 0; i < arr.length; i++){
+				i[0].value = null;
+				i[1].value = null;
+			})();
 
+			var
+			arr = m[1].split(' '),
+			rooms = $('rooms');
+
+			for(var i = 0; i < arr.length -1; i++){
 
 				var
 				p = _node('p'),
@@ -432,15 +413,31 @@
 				a.href = "#";
 				a.onclick = function() {
 
-				    _client.postMessage('open_room ' + this.innerHTML );
-				    return false;
+					var
+					i = 0
+					p = _tags('p', this.parentNode.parentNode),
+					l = p.length;
+
+					for (; l > i; i++)
+					{
+						p[i].className = '';
+					}
+
+					this.parentNode.className = 'sel';
+					_client.postMessage('open_room ' + this.parentNode.id );
+					return false;
 				}
 
-
+				a.appendChild( _node('b') ).appendChild( _txt('Secure room name') );
 				a.appendChild(t);
 				p.appendChild(a);
 				rooms.appendChild(p);
-	             	}
+			}
+
+			setTimeout(function() {
+
+				_body().classPerk('stage2 loaded', 'stage1 stage3 loading');				
+			}, 300 );
 		}
 
 		,new_room : function( m ) {
@@ -450,12 +447,36 @@
 
 		,open_room : function() {
 
+			_userAdd( USER );
 			_body().classPerk('stage3');
 		}
 
 		,invite : function( m ) {
 
-			$('generated_invite').value = m.slice(1);
+			var
+			i = _tags('input', $('chat-invite'))[0];
+
+			i.value = m.slice(1);
+
+			_chatSay( _now() + ' SYSTEM:: New invite was generated!');
+
+			i.setSelectionRange(0, i.value.length);
+
+
+			i.onclick = function() {
+
+				this.setSelectionRange(0, i.value.length);
+
+				try {
+
+					_chatSay( _now() + ' SYSTEM:: ' +
+						( document.execCommand('copy')
+						? 'Invite code was copied to your clipboard.'
+						: 'Please press Cntr+C to copy invite code into your clipboard...'
+					));
+
+				} catch ( e ) { /* Could not copy to clipboard */ }
+			};
 		}
 
 		,new_message : function( m ) {
@@ -502,6 +523,10 @@
 
 			+ '.other	{background:#eee; margin-right:20%}'
 			+ '.other span	{display:block; color:#7a9; font-size:0.85em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
+
+			+ '.system	{background:#fff; border-color:#def; color:#272}'
+			+ '.system span	{display:block; color:#7a9; font-size:0.7em; margin:0.5em 0 -0.5em 0; font-family:monospace}'
+
 
 			));
 
@@ -577,7 +602,7 @@
 	};
 
 
-	$('newroom').onsubmit = function() {
+	$('room-new').onsubmit = function() {
 
 		_client.postMessage('create_new_room');
 
@@ -585,7 +610,7 @@
 	};
 
 
-	$('invite').onsubmit = function() {
+	$('room-invite').onsubmit = function() {
 
 		var
 		i = _tags('input', this)[0];
@@ -596,7 +621,15 @@
 	};
 
 
-	$('chatinput').onsubmit = function() {
+	$('chat-invite').onsubmit = function() {
+
+		_client.postMessage('generate_invite');
+
+		return false;
+	};
+
+
+	$('chat-input').onsubmit = function() {
 
 		var
 		m,
@@ -607,14 +640,88 @@
 			m = _now() + ' ' + USER + ':: ' + i.value;
 			_client.postMessage('message ' + m );
 			_chatSay( m );
+			m = null;
 		}
 
 		i.value = '';
 		i.focus();
-		m = null;
 
 		return false;
 	};
+
+
+	/* other buttons */
+
+	(function() {
+
+		var
+		b = $('chat-menu');
+
+		b[1].onclick = function() {
+
+			_roomsShow();
+ 			return false;
+		};
+
+		b[0].onclick = 
+ 		$('rooms-logout').onclick = function() {
+
+			_logout();
+ 			return false;
+ 		}
+
+
+	})();
+
+
+
+	function _roomsShow() {
+
+		/* need to reload room list */
+
+		_body().classPerk('stage2 loaded', 'stage1 stage3 loading');
+
+		return false;
+	}
+
+
+	function _userAdd( n ) {
+
+		if ('SYSTEM' == n || USERS[ n ]) return false;
+
+		var
+		u = $('users')
+			.appendChild( _node('p') )
+			.appendChild( _node('a') )
+			.appendChild( _txt( n ) );
+
+		u.parentNode.href = '#';
+		u.parentNode.parentNode.id = 'USER-' + n;
+
+		( n == USER ) && ( u.parentNode.className = 'me');
+
+		USERS[ n ] = 1;
+	}
+
+
+	function _userRemove( n ) {
+
+		if (!USERS[ n ]) return false;
+
+		var
+		u = $( 'USER-' + n );
+		u.parentNode.removeChild( u );
+
+		delete USERS[ n ];
+	}
+
+
+	function _logout() {
+
+		_body().classPerk('unload');
+
+		return false;
+	}
 
 
 	function _chatSay( a ) {
@@ -628,9 +735,10 @@
 		n = f[1], /* name */
 
 		p = _node('p');
-		p.className  = ( USER == n ) ? 'me' : 'other';
 
-		p.appendChild( _txt( m[1] ) );
+		p.className  = ( _mstyle[ ( USER == n ) ? 'ME' : n ] ) || 'other';
+
+		p.appendChild( _txt( m.slice( 1 ).join('::') ) );
 		p.appendChild( _node('span'))
 		 .appendChild( _txt( 
 
@@ -638,6 +746,7 @@
 		));
 
 		_chatUpdate( p );
+		_userAdd( n );
 
 		return true;
 	}
@@ -692,5 +801,75 @@
 
 
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<style>
+
+		.demo		{position:absolute; width:226px; bottom:0; right:0; padding:1.5em; background:#000; font-size:10px; font-weight:bold; z-index:10000;}
+		.demo a		{padding:0 1em;}
+
+		.d1,
+		.d3,
+		.d4,
+		.d5,
+		.d6		{display:none;}
+
+.loading	.d1,
+.loading	.d3		{display:inline;}
+.loading	.d2		{display:none}
+
+.stage2		.d4,
+.stage2		.d5		{display:inline;}
+.stage2		.d2		{display:none;}
+
+
+.stage3		.d4		{display:none;}
+.stage3		.d3		{display:inline;}
+
+.unload		.d1,
+.unload		.d2,
+.unload		.d3,
+.unload		.d4,
+.unload		.d5		{display:none;}
+.unload		.d6		{display:inline;}
+
+</style>
+
+<div class="demo">
+
+	<span style="color:#eee">DEBUG:</span>
+	<a class="d1" href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Back to login...</a>
+	<a class="d2"  href="#" style="color:#fc0" onclick="_body().classPerk('loading'); return false;">...checking login...</a>
+
+	<a class="d5"  href="#" style="color:#fc0" onclick="_body().classPerk('unload'); return false;">Logout</a>
+	<a class="d6"  href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Reset</a>
+
+	<a class="d3"  href="#" style="color:#fc0" onclick="_body().classPerk('stage2 loaded', 'stage1 stage3 loading'); return false;">Show rooms</a>
+	<a class="d4"  href="#" style="color:#fc0" onclick="_body().classPerk('stage3'); return false;">Chat</a>
+
+</div>
+
+
+
+
+
 
 </body></html>

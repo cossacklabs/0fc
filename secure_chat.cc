@@ -87,6 +87,7 @@ public:
   }
       
 private:
+  pp::Instance* ppinstance_;
   pnacl::fileio_api store_;
   std::string url_;
   std::string user_name_;
