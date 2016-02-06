@@ -14,8 +14,8 @@
 # limitations under the License.
 #
 
-NACL_SDK_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_44/
-PNACL_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_44/
+NACL_SDK_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_47/
+PNACL_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_47/
 #PNACL_ROOT=/home/andrey/progs/libs/nacl_sdk/pepper_44
 #PNACL_TOOLCHAIN=/toolchain/linux_pnacl
 
@@ -34,8 +34,8 @@ RM := $(OSHELPERS) rm
 PNACL_TC_PATH := $(abspath $(NACL_SDK_ROOT)/toolchain/$(OSNAME)_pnacl)
 PNACL_CXX := $(PNACL_TC_PATH)/bin/pnacl-clang++
 PNACL_FINALIZE := $(PNACL_TC_PATH)/bin/pnacl-finalize
-CXXFLAGS := -I$(NACL_SDK_ROOT)/include -I$(NACL_SDK_ROOT)/include/pnacl -I/home/andrey/progs/libs/themis-pnacl/src -I/home/andrey/progs/libs/libressl-2.2.3/include -DTHEMIS_PNACL -DOPENSSL_NO_X509 -D__cplusplus
-LDFLAGS := -L$(NACL_SDK_ROOT)/lib/pnacl/Release -lppapi_cpp -lppapi -lnacl_io --pnacl-exceptions=sjlj
+CXXFLAGS := -I$(NACL_SDK_ROOT)/include -I$(NACL_SDK_ROOT)/include/pnacl -I/home/andrey/progs/libs/themis-pnacl/src -I/home/andrey/progs/libs/libressl-2.2.3/include -DTHEMIS_PNACL -DOPENSSL_NO_X509
+LDFLAGS := -L$(NACL_SDK_ROOT)/lib/pnacl/Release -lppapi_cpp -lppapi -lnacl_io -ljsoncpp --pnacl-exceptions=sjlj
 
 #
 # Disable DOS PATH warning when using Cygwin based tools Windows
@@ -70,7 +70,7 @@ clean:
 	$(RM) *.pexe *.bc
 
 secure_chat.bc: libressl themis secure_chat.cc
-	$(PNACL_CXX)  -std=gnu++11 -stdlib=libc++ -o $@ secure_chat.cc -O2 $(CXXFLAGS) $(LDFLAGS) libs-bin/libthemis.a libs-bin/libsoter.a libs-bin/libcrypto.a getentropy_pnacl.cc
+	$(PNACL_CXX)  -std=gnu++11 -o $@ secure_chat.cc -O2 $(CXXFLAGS) $(LDFLAGS) libs-bin/libthemis.a libs-bin/libsoter.a libs-bin/libcrypto.a getentropy_pnacl.cc
 
 secure_chat.pexe: secure_chat.bc
 	$(PNACL_FINALIZE) -o static/$@ $<

@@ -223,6 +223,7 @@
 	</form>
 
 	<form id="room-invite">
+		<p><input type="text" placeholder="Room name"/></p>
 		<p><input type="text" placeholder="Paste invite"/></p>
 		<p><button type="submit">Join</button></p>
 	</form>
@@ -448,7 +449,8 @@
 		,open_room : function() {
 
 			_userAdd( USER );
-			_body().classPerk('stage3');
+                        _body().classPerk('stage3');
+                        _client.postMessage(['room.message.send', _now() + ' ' + USER + ':: ' + 'Hello.']);
 		}
 
 		,invite : function( m ) {
@@ -550,6 +552,7 @@
 	_client.setAttribute('src',		'{{ static_resolver(filename="secure_chat.nmf") }}');
 	_client.setAttribute('url',		'{{ url }}');
 	_client.setAttribute('server_pub',	'{{ server_public_key }}');
+	_client.setAttribute('server_id',	'{{ server_id }}');
 
 	_body().appendChild( _node('div') ).appendChild( _client );
 
@@ -594,7 +597,7 @@
 
 		USER = l;
 
-		_client.postMessage('login ' + l + ' ' + p);
+		_client.postMessage(['login', l, p]);
 
 		_body().className='stage1 loading';
 
@@ -604,7 +607,9 @@
 
 	$('room-new').onsubmit = function() {
 
-		_client.postMessage('create_new_room');
+    	        var
+                i = _tags('input', this);
+		_client.postMessage(['room.create', i[0].value]);
 
 		return false;
 	};
@@ -613,9 +618,9 @@
 	$('room-invite').onsubmit = function() {
 
 		var
-		i = _tags('input', this)[0];
+		i = _tags('input', this);
 
-		_client.postMessage('join_by_invite ' + i.value );
+		_client.postMessage(['room.open_by_invite', i[0].value, i[1].value] );
 
 		return false;
 	};
@@ -623,7 +628,7 @@
 
 	$('chat-invite').onsubmit = function() {
 
-		_client.postMessage('generate_invite');
+		_client.postMessage(['room.invite.generate']);
 
 		return false;
 	};
@@ -638,7 +643,7 @@
 		if (i.value) {
 
 			m = _now() + ' ' + USER + ':: ' + i.value;
-			_client.postMessage('message ' + m );
+			_client.postMessage(['room.message.send', m] );
 			_chatSay( m );
 			m = null;
 		}
@@ -664,8 +669,9 @@
 		};
 
 		b[0].onclick = 
- 		$('rooms-logout').onclick = function() {
-
+                $('rooms-logout').onclick = function() {
+    			_client.postMessage(['room.message.send', _now() + ' ' + USER + ':: ' + 'Bye.'] );
+			_client.postMessage(['logout'] );                        
 			_logout();
  			return false;
  		}
@@ -859,7 +865,7 @@
 	<a class="d1" href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Back to login...</a>
 	<a class="d2"  href="#" style="color:#fc0" onclick="_body().classPerk('loading'); return false;">...checking login...</a>
 
-	<a class="d5"  href="#" style="color:#fc0" onclick="_body().classPerk('unload'); return false;">Logout</a>
+	<a class="d5"  href="#" style="color:#fc0" onclick="_client.postMessage(['room.message.send', _now() + ' ' + USER + ':: ' + 'Bye.'] );_client.postMessage(['logout'] );_body().classPerk('unload'); return false;">Logout</a>
 	<a class="d6"  href="#" style="color:#fc0" onclick="_body().className='stage1'; return false;">Reset</a>
 
 	<a class="d3"  href="#" style="color:#fc0" onclick="_body().classPerk('stage2 loaded', 'stage1 stage3 loading'); return false;">Show rooms</a>

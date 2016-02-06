@@ -45,8 +45,8 @@ namespace pnacl {
 
   class fileio_listener_t{
   public:
-    virtual void on_open(const int32_t error_code, const std::string& list)=0;
-    virtual void on_load(const int32_t error_code, const std::string& key, const std::vector<uint8_t>& data)=0;
+    virtual void on_error(const in)
+    virtual void on_load(const int32_t error_code, const std::vector<uint8_t>& data)=0;
     virtual void on_save(const int32_t error_code)=0;
   };
   
@@ -60,45 +60,34 @@ namespace pnacl {
       file_system_ready_(false),
       encrypter_(NULL),
       user_name_(""),
-      listener_(listener)
-    {}
+      listener_(listener){
+      file_thread_.Start();
+      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::open_file_system));
+    }
     
     virtual ~fileio_api(){
       if(encrypter_)
 	delete encrypter_;
-    }
-
-    void open(const std::string& user_name, const std::string& password){
-      user_name_=user_name;
-      try{
-	encrypter_=new themispp::secure_cell_seal_t(std::vector<uint8_t>(password.data(), password.data()+password.length()));
-      }catch(themispp::exception_t& e){
-	listener_->on_open(PNACL_IO_LOAD_ERROR,"");
-	return;
-      }
-      file_thread_.Start();
-      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::open_file_system));
     }
     
     void save(const std::string& key, const std::vector<uint8_t>& data) {
       file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::save_, key, data));
     }
 
-    void mk_sub_key(const std::string& sub_key){
-      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::mk_sub_key_, sub_key));
-    }
-
-    void rm_key(const std::string& key){
+    void remove(const std::string& key){
       file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::rm_, key));
     }
     
-    void load(const std::string& key) {
-      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::load_, key));
+    void load(const std::string& key, const std::string& password) {
+      try{
+	encrypter_=new themispp::secure_cell_seal_t(std::vector<uint8_t>(password.data(), password.data()+password.length()));
+      }catch(themispp::exception_t& e){
+	listener_->on_open(PNACL_IO_LOAD_ERROR,"");
+	return;
+      }
+      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::load_));
     }
 
-    bool ready(){
-      return file_system_ready_;
-    }
   private:
     void rm_(int32_t result, const std::string& key){
       if (!file_system_ready_ && !encrypter_)
@@ -106,61 +95,18 @@ namespace pnacl {
       pp::FileRef ref(file_system_, (std::string("/")+user_name_+"/"+key).c_str());
       ref.ReadDirectoryEntries(callback_factory_.NewCallbackWithOutput(&fileio_api::list_rm_, ref));
     }
+
     void open_file_system(int32_t result) {
-      int32_t res=file_system_.Open(1024 * 1024, pp::BlockUntilComplete());
-      if (res!=PP_OK){
-	listener_->on_open(PNACL_IO_OPEN_ERROR,"");
-	return;
+      fprintf(stderr, "open_file_system\n");
+      if(!file_system_ready_){
+	int32_t res=file_system_.Open(1024 * 1024, pp::BlockUntilComplete());
+	if (res!=PP_OK){
+	  listener_->on_open(res,"");
+	  return;
+	}
+	file_system_ready_=true;
       }
-      file_system_ready_=true;
-      pp::FileRef ref(file_system_, (std::string("/")+user_name_).c_str());
-      ref.ReadDirectoryEntries(callback_factory_.NewCallbackWithOutput(&fileio_api::list_, ref));
     }
-    
-    void mk_sub_key_(int32_t, const std::string& mk_sub_key){
-	pp::FileRef ref(file_system_, (std::string("/")+user_name_+"/"+mk_sub_key).c_str());
-	int32_t res=ref.MakeDirectory(PP_MAKEDIRECTORYFLAG_NONE, pp::BlockUntilComplete());
-	if(res==PP_OK)
-	  listener_->on_save(PNACL_IO_SUCCESS);
-	else
-	  listener_->on_save(PNACL_IO_SAVE_ERROR);
-	return;
-    }
-      
-    void list_rm_(int32_t result, const std::vector<pp::DirectoryEntry>& entries, pp::FileRef ref){
-      if(result!=PP_OK){
-	listener_->on_save(PNACL_IO_SAVE_ERROR);
-	return;
-      }
-      for(size_t i=0; i<entries.size(); ++i){
-	pp::FileRef ref1(file_system_, entries[i].file_ref().GetPath().AsString().c_str());
-	if(ref1.Delete(pp::BlockUntilComplete())!=PP_OK)
-	  listener_->on_save(PNACL_IO_STORAGE_NOT_READY_ERROR);
-      }
-      if(ref.Delete(pp::BlockUntilComplete())!=PP_OK)
-	  listener_->on_save(PNACL_IO_STORAGE_NOT_READY_ERROR);
-      listener_->on_save(PNACL_IO_STORAGE_NOT_READY_ERROR);
-    }
-
-    void list_(int32_t result, const std::vector<pp::DirectoryEntry>& entries, pp::FileRef){
-      if(result!=PP_OK){
-	pp::FileRef ref(file_system_, (std::string("/")+user_name_).c_str());
-	int32_t res=ref.MakeDirectory(PP_MAKEDIRECTORYFLAG_NONE, pp::BlockUntilComplete());
-	if(res==PP_OK)
-	  listener_->on_open(PNACL_IO_SUCCESS, "");
-	else
-	  listener_->on_open(PNACL_IO_OPEN_ERROR, "");
-	return;
-      }
-      std::ostringstream o;
-      for(size_t i=0; i<entries.size(); ++i){
-	pp::Var name=entries[i].file_ref().GetName();
-	if(name.is_string())
-	  o<<name.AsString()<<" ";
-      }
-      listener_->on_open(PNACL_IO_SUCCESS, o.str());
-    }
-
     void save_(int32_t /* result */, const std::string& file_name, const std::vector<uint8_t>& context) {
       if (!file_system_ready_ && !encrypter_)
 	listener_->on_save(PNACL_IO_STORAGE_NOT_READY_ERROR);
@@ -180,31 +126,29 @@ namespace pnacl {
 	listener_->on_save(PNACL_IO_SAVE_ERROR);
     }
 
-    void load_(int32_t /* result */, const std::string& file_name){
+    void load_(int32_t result){
       if (!file_system_ready_ && !encrypter_)
-	listener_->on_load(PNACL_IO_STORAGE_NOT_READY_ERROR, file_name, std::vector<uint8_t>(0));
+	listener_->on_load(PNACL_IO_STORAGE_NOT_READY_ERROR, std::vector<uint8_t>(0));
       pp::FileRef ref(file_system_, (std::string("/")+user_name_+"/"+file_name).c_str());
       pp::FileIO file(instance_);
       PP_FileInfo info;
       int32_t open_result = file.Open(ref, PP_FILEOPENFLAG_READ, pp::BlockUntilComplete());
       if (open_result == PP_ERROR_FILENOTFOUND)
-	listener_->on_load(PNACL_IO_KEY_NOT_FOUND_ERROR, file_name, std::vector<uint8_t>(0));
+	listener_->on_open(PNACL_IO_KEY_NOT_FOUND_ERROR, std::vector<uint8_t>(0));
       else if (open_result == PP_OK && file.Query(&info, pp::BlockUntilComplete())==PP_OK){
 	std::vector<uint8_t> data(info.size);
 	if(file.Read(0, (char*)(&data[0]), data.size(), pp::BlockUntilComplete())==data.size())
 	  try{
 	    data=encrypter_->decrypt(data);
-	    listener_->on_load(PNACL_IO_SUCCESS, file_name, data);
+	    listener_->on_load(PNACL_IO_SUCCESS, data);
 	    return;
 	  }catch(themispp::exception_t& e){
-	    listener_->on_load(PNACL_IO_INVALID_PASSWORD_ERROR, file_name, std::vector<uint8_t>(0));
+	    listener_->on_load(PNACL_IO_INVALID_PASSWORD_ERROR, std::vector<uint8_t>(0));
 	    return;
 	  }
       }
-      listener_->on_load(PNACL_IO_LOAD_ERROR, file_name,std::vector<uint8_t>(0));
+      listener_->on_load(PNACL_IO_LOAD_ERROR, std::vector<uint8_t>(0));
     }	    
-
-
 
   private:
     pp::FileSystem file_system_;

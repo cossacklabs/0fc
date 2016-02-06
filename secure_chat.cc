@@ -35,6 +35,7 @@
 #include "ppapi/utility/threading/simple_thread.h"
 #include "nacl_io/nacl_io.h"
 
+
 #include "helpers/base64.hpp"
 #include "pnacl_fileio_api.hpp"
 #include "secure_chat_room.hpp"
@@ -186,29 +187,11 @@ public:
   }
   */
 public:
-  virtual void on_open(const int32_t error_code, const std::string& chat_list){
-    if(error_code!=PNACL_IO_SUCCESS){
-      std::ostringstream s;
-      s<<"can't open storage "<<std::hex<<error_code;
-      postError(s.str());
-      return;
-    }
-    post("available_chat_list", chat_list);
-  }
-
-  virtual void on_load(const int32_t error_code, const std::string& key, const std::vector<uint8_t>& data){
+  virtual void on_load(const int32_t error_code, const std::vector<uint8_t>& data){
     if(error_code!=PNACL_IO_SUCCESS)
-      postError(key + " can`t load");
+      post("available_chat_list", "");
     else{
-      std::string kk=key.substr(33,key.length()+1-33);
-      postInfo(kk+" loaded");
-      if(kk=="pub")
-	public_key_=data;
-      else if (kk == "priv")
-	private_key_=data;
-      else if (kk=="key")
-	room_key_=data;
-      on_room_load();
+      post("available_chat_list", "");
     }
   }
 
@@ -217,11 +200,8 @@ public:
       postError("storage error");
   }
 private:
-  void room_create(const std::string& name)
-  {
-    room_=std::shared_ptr<pnacl::secure_chat_room_t>(new pnacl::secure_chat_room_t(ppinstance, STR_2_VEC(server_id_), B64_2_VEC(server_pub_), name));
-    //    socket_.send(std::string("PUBKEY ")+webthemispp::base64_encode(gen.get_pub()));
-    //    socket_.send(std::string("NEWROOM"));
+  void room_create(const std::string& name){
+    room_=std::shared_ptr<pnacl::secure_chat_room_t>(new pnacl::secure_chat_room_t(this, url_, STR_2_VEC(server_id_), B64_2_VEC(server_pub_), name));
   }
 
   void room_open(const std::string& room_to_open){
@@ -237,21 +217,22 @@ private:
 
   void invite_generate()
   {
-    /*    themispp::secure_rand<32> rnd;
-    std::vector<uint8_t> new_invite=rnd.get();
-    //store_.save(room_name_+"/"+webthemispp::base64_encode(new_invite), std::vector<uint8_t>(0));
-    invites_.push_back(webthemispp::base64_encode(new_invite));
-    post("invite", room_name_+" "+webthemispp::base64_encode(public_key_)+" "+webthemispp::base64_encode(new_invite));
-    */  }
+    if(!room_)
+      postError("generating invite in undefined room");
+    room_->generate_invite();
+  }
 
   void room_open_by_invite(const std::string& room_name, const std::string& invite){
-    /*    themispp::key_pair_generator_t<themispp::EC> gen;
-    public_key_=gen.get_pub();
-    private_key_=gen.get_priv();
-    post("pub_key",webthemispp::base64_encode(public_key_));
-    socket_.send(std::string("PUBKEY ")+webthemispp::base64_encode(public_key_));
-    socket_.send("INVITE "+webthemispp::base64_encode(public_key_)+" "+room_name+" "+invite_owner_pub_key+" "+invite);
-    */  }
+    room_=std::shared_ptr<pnacl::secure_chat_room_t>(new pnacl::secure_chat_room_t(this, url_, STR_2_VEC(server_id_), B64_2_VEC(server_pub_), room_name, invite));
+  }
+
+  void room_message_send(const std::string& message){
+    if(!room_){
+      postError("send message to undefined room");
+      return;
+    }
+    room_->send(message);
+  }
   
 public:
   virtual void HandleMessage(const pp::Var& var_message) {
@@ -261,23 +242,24 @@ public:
     }
     const pp::VarArray params(var_message);
     if (UI_STRING_PARAM(params,0) == "login"){ //username, password 
-      store_.open(webthemispp::base64_encode(STR_2_VEC(url_+UI_STRING_PARAM(params,1))), UI_STRING_PARAM(params,2));
-    } else if (UI_STRING_PARAM(params,0) == "room.create"){ //room_name
+      store_.load(helpers::base64_encode(STR_2_VEC(url_+UI_STRING_PARAM(params,1))), UI_STRING_PARAM(params,2));
+    } else if (UI_STRING_PARAM(params,0) == "logout"){
+      room_.reset();
+      //store_.open(helpers::base64_encode(STR_2_VEC(url_+UI_STRING_PARAM(params,1))), UI_STRING_PARAM(params,2));
+    }else if (UI_STRING_PARAM(params,0) == "room.create"){ //room_name
       room_create(UI_STRING_PARAM(params,1));
     }else if (UI_STRING_PARAM(params,0) == "room.open"){ //room_name
       room_open(UI_STRING_PARAM(params,1));
     }else if (UI_STRING_PARAM(params,0) == "room.invite.generate"){
       invite_generate();
     }else if (UI_STRING_PARAM(params,0) == "room.open_by_invite"){ //room_name, invite
-      //      std::string room_name, invite_owner_pub_key, invite;
-      //      message>>room_name>>invite_owner_pub_key>>invite;
       room_open_by_invite(UI_STRING_PARAM(params,1), UI_STRING_PARAM(params,2));
-    }else if (UI_STRING_PARAM(params,0) == "message.send"){ // room, message
-      room_message_send(UI_STRING_PARAM(params,1), UI_STRING_PARAM(params,2));
+    }else if (UI_STRING_PARAM(params,0) == "room.message.send"){ // room, message
+      room_message_send(UI_STRING_PARAM(params,1));
       //      std::string m=message.str().substr(8,message.str().length()-1+8);
       //socket_.send("MESSAGE "+room_name_+" "+webthemispp::base64_encode(room_encrypter_->encrypt(std::vector<uint8_t>(m.c_str(), m.c_str()+m.length()+1)).get()));
     }else
-      postError(std::string("openation "+operation+" not supported");
+      postError(std::string("openation ")+UI_STRING_PARAM(params,0)+" not supported");
   }
 
 private:

@@ -52,7 +52,6 @@ namespace pnacl {
 			 receive_callback_t on_receive_,
 			 error_callback_t on_error_):
       socket_(ppinstance, this),
-      receive_listener_(recv_listener),
       callback_(server_id, server_pub_key),
       session_(NULL),
       receive_callback_(on_receive_),
@@ -85,9 +84,10 @@ namespace pnacl {
 
     virtual void on_receive(const std::string& data){
       try{
+	std::cerr<<data<<std::endl;
 	std::vector<uint8_t> d=session_->unwrap(helpers::base64_decode(data));
-	if(session_->is_established())
-	  socket_.send(helpers::base64_encode(session_->init()));
+	if(!(session_->is_established()))
+	  socket_.send(helpers::base64_encode(d));
 	else if(d.size()==0)
 	  connect_callback_();
 	else
@@ -111,7 +111,6 @@ namespace pnacl {
     
   private:
     websocket_api socket_;
-    web_socket_receive_listener* const receive_listener_;
     callback callback_;
     std::shared_ptr<themispp::secure_session_t> session_;
     connect_callback_t connect_callback_;
