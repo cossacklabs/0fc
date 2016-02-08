@@ -116,19 +116,6 @@ def wshandler(request):
                         del online[pub_key]
                         logger.info('closed')
     return ws_response
-                                        
-                                        
-    @asyncio.coroutine
-    def finish(app, srv, handler):
-        global online
-        for sockets in online.values():
-            for socket in sockets:
-                socket.close()
-                                                    
-    yield from asyncio.sleep(0.1)
-    srv.close()
-    yield from handler.finish_connections()
-    yield from srv.wait_closed()
 
 
 @asyncio.coroutine
@@ -159,6 +146,20 @@ def init(port, loop):
     srv = yield from loop.create_server(handler, '0.0.0.0', port)
     logger.info("Server started at http://0.0.0.0:{}".format(port))
     return handler, app, srv
+
+
+@asyncio.coroutine
+def finish(app, srv, handler):
+    global online
+    for sockets in online.values():
+        for socket in sockets:
+            socket.close()
+
+    yield from asyncio.sleep(0.1)
+    srv.close()
+    yield from handler.finish_connections()
+    yield from srv.wait_closed()
+
 
 
 if __name__ == '__main__':
