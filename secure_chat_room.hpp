@@ -19,10 +19,14 @@
 
 #include <functional>
 
+
+
 #include "pnacl_secure_websocket_api.hpp"
 #include "themispp/secure_keygen.hpp"
 #include "themispp/secure_rand.hpp"
 #include "themispp/secure_message.hpp"
+#include "json/json.h"
+
 
 namespace pnacl {
   class secure_chat_room_t{
@@ -32,14 +36,20 @@ namespace pnacl {
     typedef std::vector<uint8_t> public_key_t;
     typedef std::vector<uint8_t> room_key_t;
     typedef std::vector<uint8_t> invite_t;
+
+    typedef std::function<void(const std::string& id, const Json::Value& room_data)> save_room_callback_t;
   public:
     secure_chat_room_t(pp::Instance* ppinstance,
 		       const std::string& url, 
 		       const id_t& server_id,
-		       const public_key_t& server_pub_key):
-      ppinstance_(ppinstance),
-      socket_(server_id, server_pub_key, ppinstance, std::bind(&secure_chat_room_t::on_receive, this, std::placeholders::_1), std::bind(&secure_chat_room_t::on_error, this, std::placeholders::_1)){}
-
+		       const public_key_t& server_pub_key,
+		       bool owner,
+		       save_room_callback_t save_callback):
+		       ppinstance_(ppinstance),
+		       owner_(owner),
+		       save_callback_(save_callback),
+		       socket_(server_id, server_pub_key, ppinstance, std::bind(&secure_chat_room_t::on_receive, this, std::placeholders::_1), std::bind(&secure_chat_room_t::on_error, this, std::placeholders::_1)){}
+		       
     virtual ~secure_chat_room_t(){
       fprintf(stderr, "room deleted");
     }
@@ -48,9 +58,9 @@ namespace pnacl {
 		       const std::string& url, 
 		       const id_t& server_id,
 		       const public_key_t& server_pub_key,
+		       save_room_callback_t save_callback,
 		       const std::string& readable_name):
-      secure_chat_room_t(ppinstance, url, server_id, server_pub_key)
-    {
+		       secure_chat_room_t(ppinstance, url, server_id, server_pub_key, true, save_callback){
       owner_=true;
       readable_name_=readable_name;
       themispp::secure_key_pair_generator_t<themispp::EC> gen;
@@ -68,29 +78,30 @@ namespace pnacl {
     }
 
     /*open existing room*/
-    /*    secure_chat_room_t(pp::Instance* ppinstance,
+    secure_chat_room_t(pp::Instance* ppinstance,
 		       const std::string& url, 
 		       const id_t& server_id,
 		       const public_key_t& server_pub_key,
-		       const std::string& readable_name,
-		       const std::string& data):
-      secure_chat_room_t(ppinstance, url, server_id, server_pub_key)
+		       save_room_callback_t save_callback,
+		       const Json::Value& data):
+		       secure_chat_room_t(ppinstance, url, server_id, server_pub_key, false, save_callback)
     {
-      owner_=false;
-      readable_name_=readable_name;
       std::string ii=helpers::base64_encode(public_key_);
-      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), private_key_, std::bind(&secure_chat_room_t::on_open_room_connect, this));
+      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), private_key_, [this](){
+	  socket_.send(std::string("PUBKEY ")+helpers::base64_encode(public_key_));
+	  socket_.send(std::string("ROOM.OPEN ")+name_);
+	});
     }
-    */
+
     /*open room by invite*/
     secure_chat_room_t(pp::Instance* ppinstance,
 		       const std::string& url, 
 		       const id_t& server_id,
 		       const public_key_t& server_pub_key,
+		       save_room_callback_t save_callback,
 		       const std::string& readable_name,
 		       const std::string& invite):
-      secure_chat_room_t(ppinstance, url, server_id, server_pub_key)
-    {
+		       secure_chat_room_t(ppinstance, url, server_id, server_pub_key, false, save_callback){
       owner_=false;
       readable_name_=readable_name;
       themispp::secure_key_pair_generator_t<themispp::EC> gen;
@@ -146,6 +157,7 @@ namespace pnacl {
 			 name+" "+			 
 			 owner_pub_key+" "+
 			 helpers::base64_encode(ss.encrypt(room_key_, invites_[invite_id])));
+	    invites_.erase(invite_id);
 	  }catch(themispp::exception_t& e){
 	    postError(e.what());
 	  }}
@@ -219,62 +231,26 @@ namespace pnacl {
 
   private:
     std::string serialize_invite(const std::vector<uint8_t> id, const std::vector<uint8_t> token){
-      std::vector<uint8_t> data(name_.length()+id.size()+token.size()+public_key_.size()+sizeof(int32_t)*4);
-      std::vector<uint8_t>::iterator curr=data.begin();
-      //name
-      uint32_t size=name_.length();
-      std::copy((uint8_t*)&size, (uint8_t*)&size+sizeof(size), curr);      
-      curr+=4;
-      std::copy(name_.c_str(), name_.c_str()+name_.length(), curr);
-      curr+=size;
-      //public_key
-      size=public_key_.size();
-      std::copy((uint8_t*)&size, (uint8_t*)&size+sizeof(size), curr);      
-      curr+=4;
-      std::copy(public_key_.begin(), public_key_.end(), curr);      
-      curr+=size;
-      //id
-      size=id.size();
-      std::copy((uint8_t*)&size, (uint8_t*)&size+sizeof(size), curr);      
-      curr+=4;
-      std::copy(id.begin(), id.end(), curr);      
-      curr+=size;
-      //token
-      size=token.size();
-      std::copy((uint8_t*)&size, (uint8_t*)&size+sizeof(size), curr);      
-      curr+=4;
-      std::copy(token.begin(), token.end(), curr);      
-      curr+=size;
-      return helpers::base64_encode(data);
+      Json::Value serialized_invite = Json::Value(Json::objectValue);
+      serialized_invite["room_name"]=name_;
+      serialized_invite["readable_name"]=readable_name_;
+      serialized_invite["public_key"]=helpers::base64_encode(public_key_);
+      serialized_invite["invite"]["id"]=helpers::base64_encode(id);
+      serialized_invite["invite"]["token"]=helpers::base64_encode(token);
+      std::string serializet_invite_string=Json::FastWriter().write(serialized_invite);
+      return helpers::base64_encode(std::vector<uint8_t>(serializet_invite_string.c_str(), serializet_invite_string.c_str()+serializet_invite_string.length()));
     }
-
+    
     void parse_invite(const std::string& invite){
       std::vector<uint8_t> data=helpers::base64_decode(invite);
-      std::vector<uint8_t>::iterator curr=data.begin();
-      uint32_t size;
-      //name
-      std::copy(curr, curr+sizeof(uint32_t), (uint8_t*)&size);
-      curr+=4;
-      name_=std::string(curr, curr+size);
-      curr+=size;
-      //owner_public_key_;
-      std::copy(curr, curr+sizeof(uint32_t), (uint8_t*)&size);
-      curr+=4;
-      owner_public_key_.resize(size);
-      std::copy(curr, curr+size, owner_public_key_.begin());
-      curr+=size;      
-      //invite_id_;
-      std::copy(curr, curr+sizeof(uint32_t), (uint8_t*)&size);
-      curr+=4;
-      invite_id_.resize(size);
-      std::copy(curr, curr+size, invite_id_.begin());
-      curr+=size;      
-      //invite_token_;
-      std::copy(curr, curr+sizeof(uint32_t), (uint8_t*)&size);
-      curr+=4;
-      invite_token_.resize(size);
-      std::copy(curr, curr+size, invite_token_.begin());
-      curr+=size;            
+      std::string invite_str((char*)(&data[0]), data.size());
+      Json::Value root;
+      Json::Reader().parse(invite_str, root);
+      name_=root["room_name"].asString();
+      readable_name_=root["readable_name"].asString();
+      owner_public_key_=helpers::base64_decode(root["public_key"].asString());
+      invite_id_=helpers::base64_decode(root["invite"]["id"].asString());
+      invite_token_=helpers::base64_decode(root["invite"]["token"].asString());
     }
 
   private:
@@ -322,6 +298,7 @@ namespace pnacl {
 
   private:
     pnacl::secure_websocket_api socket_;
+    save_room_callback_t save_callback_;
 
   private:
     void post(const std::string& command, const std::string& param1, const std::string& param2=""){

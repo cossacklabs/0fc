@@ -223,7 +223,6 @@
 	</form>
 
 	<form id="room-invite">
-		<p><input type="text" placeholder="Room name"/></p>
 		<p><input type="text" placeholder="Paste invite"/></p>
 		<p><button type="submit">Join</button></p>
 	</form>
@@ -620,7 +619,7 @@
 		var
 		i = _tags('input', this);
 
-		_client.postMessage(['room.open_by_invite', i[0].value, i[1].value] );
+		_client.postMessage(['room.open_by_invite', i[0].value] );
 
 		return false;
 	};

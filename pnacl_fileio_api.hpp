@@ -23,7 +23,7 @@
 #include "ppapi/cpp/file_ref.h"
 #include "ppapi/cpp/file_system.h"
 #include "ppapi/cpp/instance.h"
-
+#include "json/json.h"
 
 #include "themispp/exception.hpp"
 #include "themispp/secure_cell.hpp"
@@ -42,112 +42,107 @@
 
 
 namespace pnacl {
-
-  class fileio_listener_t{
-  public:
-    virtual void on_error(const in)
-    virtual void on_load(const int32_t error_code, const std::vector<uint8_t>& data)=0;
-    virtual void on_save(const int32_t error_code)=0;
-  };
   
   class fileio_api{
+  private:
+    typedef std::function<void(Json::Value&)> load_callback_t;
+    typedef std::function<void(int)> error_callback_t;
+    typedef std::function<void()> open_callback_t;
+    typedef std::function<void()> save_callback_t;
+    typedef std::function<void()> delete_callback_t;
+
   public:
-    fileio_api(pp::Instance *instance, fileio_listener_t *listener):
+    fileio_api(pp::Instance *instance,
+	       const std::string& password,
+	       open_callback_t on_open,
+	       error_callback_t on_error):
       instance_(instance),
       file_system_(instance, PP_FILESYSTEMTYPE_LOCALPERSISTENT),
       callback_factory_(this),
       file_thread_(instance),
       file_system_ready_(false),
-      encrypter_(NULL),
-      user_name_(""),
-      listener_(listener){
+      encrypter_(std::vector<uint8_t>(password.data(), password.data()+password.length())){
       file_thread_.Start();
-      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::open_file_system));
+      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::open_file_system_, on_open, on_error));
     }
     
-    virtual ~fileio_api(){
-      if(encrypter_)
-	delete encrypter_;
-    }
+    virtual ~fileio_api(){}
     
-    void save(const std::string& key, const std::vector<uint8_t>& data) {
-      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::save_, key, data));
+    void save(const std::string& key, const Json::Value& data, save_callback_t on_save, error_callback_t on_error) {
+      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::save_, key, data, on_error));
     }
 
-    void remove(const std::string& key){
-      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::rm_, key));
+    void remove(const std::string& key, delete_callback_t on_remove, error_callback_t on_error){
+      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::rm_, key, on_remove, on_error));
     }
     
-    void load(const std::string& key, const std::string& password) {
-      try{
-	encrypter_=new themispp::secure_cell_seal_t(std::vector<uint8_t>(password.data(), password.data()+password.length()));
-      }catch(themispp::exception_t& e){
-	listener_->on_open(PNACL_IO_LOAD_ERROR,"");
-	return;
-      }
-      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::load_));
+    void load(const std::string& key, load_callback_t on_load, error_callback_t on_error) {
+      file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::load_, key, on_load, on_error));
     }
 
   private:
-    void rm_(int32_t result, const std::string& key){
-      if (!file_system_ready_ && !encrypter_)
-	listener_->on_save(PNACL_IO_STORAGE_NOT_READY_ERROR);
-      pp::FileRef ref(file_system_, (std::string("/")+user_name_+"/"+key).c_str());
-      ref.ReadDirectoryEntries(callback_factory_.NewCallbackWithOutput(&fileio_api::list_rm_, ref));
+    void open_file_system_(int32_t result, open_callback_t on_open, error_callback_t on_error) {
+      int32_t res=file_system_.Open(1024 * 1024, pp::BlockUntilComplete());
+      if (res!=PP_OK){
+	on_error(res);
+	return;
+      }
+      file_system_ready_=true;
+      on_open();
     }
 
-    void open_file_system(int32_t result) {
-      fprintf(stderr, "open_file_system\n");
-      if(!file_system_ready_){
-	int32_t res=file_system_.Open(1024 * 1024, pp::BlockUntilComplete());
-	if (res!=PP_OK){
-	  listener_->on_open(res,"");
-	  return;
-	}
-	file_system_ready_=true;
-      }
+    void rm_(int32_t result, const std::string& file, delete_callback_t on_remove, error_callback_t on_error){
+      if (!file_system_ready_)
+	on_error(-1);
+      on_remove();
     }
-    void save_(int32_t /* result */, const std::string& file_name, const std::vector<uint8_t>& context) {
-      if (!file_system_ready_ && !encrypter_)
-	listener_->on_save(PNACL_IO_STORAGE_NOT_READY_ERROR);
+
+    void save_(int32_t /* result */, const std::string& file_name, const Json::Value& context, error_callback_t on_error) {
+      if (!file_system_ready_)
+	on_error(-1);
       std::vector<uint8_t> enc_data;
       try{
-	enc_data=encrypter_->encrypt(context);
+	std::string string_context=Json::FastWriter().write(context);
+	enc_data=encrypter_.encrypt(std::vector<uint8_t>(string_context.c_str(), string_context.c_str()+string_context.length()));
       }catch(themispp::exception_t& e){
-	listener_->on_save(PNACL_IO_SAVE_ERROR);
+	on_error(-5);
       }
-      pp::FileRef ref(file_system_, (std::string("/")+user_name_+"/"+file_name).c_str());
+      pp::FileRef ref(file_system_, file_name.c_str());
       pp::FileIO file(instance_);
       if (file.Open(ref, PP_FILEOPENFLAG_WRITE | PP_FILEOPENFLAG_CREATE | PP_FILEOPENFLAG_TRUNCATE, pp::BlockUntilComplete()) == PP_OK
 	  && file.Write(0, (const char*)(&enc_data[0]), enc_data.size(), pp::BlockUntilComplete())==enc_data.size()
 	  && file.Flush(pp::BlockUntilComplete())==PP_OK)
-	listener_->on_save(PNACL_IO_SUCCESS);
+	int a=1;//on_save();
       else
-	listener_->on_save(PNACL_IO_SAVE_ERROR);
+	on_error(-6);
     }
 
-    void load_(int32_t result){
-      if (!file_system_ready_ && !encrypter_)
-	listener_->on_load(PNACL_IO_STORAGE_NOT_READY_ERROR, std::vector<uint8_t>(0));
-      pp::FileRef ref(file_system_, (std::string("/")+user_name_+"/"+file_name).c_str());
+    void load_(int32_t result, const std::string& file_name, load_callback_t on_load, error_callback_t on_error){
+      if (!file_system_ready_)
+	on_error(-1);
+      pp::FileRef ref(file_system_, file_name.c_str());
       pp::FileIO file(instance_);
       PP_FileInfo info;
       int32_t open_result = file.Open(ref, PP_FILEOPENFLAG_READ, pp::BlockUntilComplete());
       if (open_result == PP_ERROR_FILENOTFOUND)
-	listener_->on_open(PNACL_IO_KEY_NOT_FOUND_ERROR, std::vector<uint8_t>(0));
+	on_error(-2);
       else if (open_result == PP_OK && file.Query(&info, pp::BlockUntilComplete())==PP_OK){
 	std::vector<uint8_t> data(info.size);
 	if(file.Read(0, (char*)(&data[0]), data.size(), pp::BlockUntilComplete())==data.size())
 	  try{
-	    data=encrypter_->decrypt(data);
-	    listener_->on_load(PNACL_IO_SUCCESS, data);
+	    data=encrypter_.decrypt(data);
+	    Json::Value root;
+	    Json::Reader reader;
+	    if(!reader.parse(std::string((char*)(&data[0]), data.size()), root))
+	      on_error(-4);
+	    on_load(root);
 	    return;
 	  }catch(themispp::exception_t& e){
-	    listener_->on_load(PNACL_IO_INVALID_PASSWORD_ERROR, std::vector<uint8_t>(0));
+	    on_error(-3);
 	    return;
 	  }
       }
-      listener_->on_load(PNACL_IO_LOAD_ERROR, std::vector<uint8_t>(0));
+      on_error(open_result);
     }	    
 
   private:
@@ -156,9 +151,9 @@ namespace pnacl {
     pp::CompletionCallbackFactory<fileio_api> callback_factory_;
     bool file_system_ready_;
     pp::SimpleThread file_thread_;
-    std::string user_name_;
-    themispp::secure_cell_seal_t* encrypter_;
-    fileio_listener_t *listener_;
+    //    std::string user_name_;
+    themispp::secure_cell_seal_t encrypter_;
+    //    fileio_listener_t *listener_;
   };
   
 } //end pnacl
