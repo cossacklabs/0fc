@@ -21,15 +21,15 @@
 
 namespace pnacl{
     class exception: public std::runtime_error{
-	public:
-	explicit exception(const std::string& what):
-	    std::runtime_error(what.c_str()){}
+    public:
+    explicit exception(const std::string& what):
+        std::runtime_error(what.c_str()){}
     };
 
     class file_not_found_exception: public pnacl::exception{
-	public:
-	explicit file_not_found_exception(const std::string& what):
-	    pnacl::exception(what.c_str()){}
+    public:
+    explicit file_not_found_exception(const std::string& what):
+        pnacl::exception(what.c_str()){}
     };
 }//themis ns
 
