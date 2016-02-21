@@ -61,18 +61,18 @@ namespace pnacl {
 		       save_room_callback_t save_callback,
 		       const std::string& readable_name):
 		       secure_chat_room_t(ppinstance, url, server_id, server_pub_key, true, save_callback){
-      owner_=true;
-      readable_name_=readable_name;
+      room_data_=Json::Value(Json::objectValue);
+      room_data_["readable_name"]=readable_name;
       themispp::secure_key_pair_generator_t<themispp::EC> gen;
-      public_key_=gen.get_pub();
-      owner_public_key_=public_key_;
-      private_key_=gen.get_priv();
+      room_data_["public_key"]=helpers::base64_encode(gen.get_pub());
+      room_data_["owner_public_key"]=room_data_["public_key"].asString();
+      room_data_["private_key"]=helpers::base64_encode(gen.get_priv());
       themispp::secure_rand_t<32> rnd;
-      room_key_=rnd.get();
-      std::string ii=helpers::base64_encode(public_key_);
-      room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(room_key_)); 
-      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), private_key_, [this](){
-	  socket_.send(std::string("PUBKEY ")+helpers::base64_encode(public_key_));
+      room_data_["room_key"]=helpers::base64_encode(rnd.get());
+      std::string ii=room_data_["public_key"].asString();
+      room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(helpers::base64_decode(room_data_["room_key"].asString()))); 
+      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), helpers::base64_decode(room_data_["private_key"].asString()), [this](){
+	  socket_.send(std::string("PUBKEY ")+room_data_["public_key"].asString());
 	  socket_.send(std::string("ROOM.CREATE"));
 	});
     }
@@ -86,10 +86,12 @@ namespace pnacl {
 		       const Json::Value& data):
 		       secure_chat_room_t(ppinstance, url, server_id, server_pub_key, false, save_callback)
     {
-      std::string ii=helpers::base64_encode(public_key_);
-      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), private_key_, [this](){
-	  socket_.send(std::string("PUBKEY ")+helpers::base64_encode(public_key_));
-	  socket_.send(std::string("ROOM.OPEN ")+name_);
+      room_data_=data;
+      std::string ii=room_data_["public_key"].asString();//helpers::base64_encode(public_key_);
+      room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(helpers::base64_decode(room_data_["room_key"].asString()))); 
+      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), helpers::base64_decode(room_data_["private_key"].asString()), [this](){
+	  socket_.send(std::string("PUBKEY ")+room_data_["public_key"].asString());
+	  socket_.send(std::string("ROOM.OPEN ")+room_data_["name"].asString());
 	});
     }
 
@@ -102,24 +104,24 @@ namespace pnacl {
 		       const std::string& readable_name,
 		       const std::string& invite):
 		       secure_chat_room_t(ppinstance, url, server_id, server_pub_key, false, save_callback){
-      owner_=false;
-      readable_name_=readable_name;
+      room_data_=Json::Value(Json::objectValue);
+      room_data_["readable_name"]=readable_name;
       themispp::secure_key_pair_generator_t<themispp::EC> gen;
-      public_key_=gen.get_pub();
-      private_key_=gen.get_priv();
+      room_data_["public_key"]=helpers::base64_encode(gen.get_pub());
+      room_data_["private_key"]=helpers::base64_encode(gen.get_priv());
       parse_invite(invite);
       themispp::secure_rand_t<32> rnd;
-      room_key_=rnd.get();
-      std::string ii=helpers::base64_encode(public_key_);
-      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), private_key_, [this](){
-	  socket_.send(std::string("PUBKEY ")+helpers::base64_encode(public_key_));
-	  themispp::secure_message_t sm(private_key_, owner_public_key_);
+      room_data_["room_key"]=helpers::base64_encode(rnd.get());
+      std::string ii=room_data_["public_key"].asString();
+      socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), helpers::base64_decode(room_data_["private_key"].asString()), [this](){
+	  socket_.send(std::string("PUBKEY ")+room_data_["public_key"].asString());
+	  themispp::secure_message_t sm(helpers::base64_decode(room_data_["private_key"].asString()), helpers::base64_decode(room_data_["owner_public_key"].asString()));
 	  socket_.send("ROOM.INVITE.VERIFICATION_REQUEST "+
-		       helpers::base64_encode(owner_public_key_)+" "+
-		       name_+" "+
-		       helpers::base64_encode(public_key_)+" "+
-		       helpers::base64_encode(invite_id_)+" "+
-		       helpers::base64_encode(sm.encrypt(room_key_)));
+		       room_data_["owner_public_key"].asString()+" "+
+		       room_data_["name"].asString()+" "+
+		       room_data_["public_key"].asString()+" "+
+		       room_data_["invite_id"].asString()+" "+
+		       helpers::base64_encode(sm.encrypt(helpers::base64_decode(room_data_["room_key"].asString()))));
 	});
     }
 
@@ -132,32 +134,39 @@ namespace pnacl {
 	switch(received_command_map_[command]){
 	case SCR_ERROR:
 	  break;
-	case SCR_ROOM_CREATED:
-	  st>>name_;
-	  post("open_room", readable_name_);
+	case SCR_ROOM_CREATED:{
+	  std::string name;
+	  st>>name;
+	  room_data_["name"]=name;
+	  save_callback_(room_data_["name"].asString(), room_data_);
+	  post("open_room", room_data_["readable_name"].asString());
 	  break;
+	}
 	case SCR_ROOM_NOT_EXIST:
+	  save_callback_(room_data_["name"].asString(), Json::Value(Json::nullValue));
+	  post("remove_room", room_data_["name"].asString());
 	  break;
 	case SCR_ROOM_OPENED:
-	  post("open_room", readable_name_);
+	  save_callback_(room_data_["name"].asString(), room_data_);
+	  post("open_room", room_data_["readable_name"].asString());
 	  break;
 	case SCR_ROOM_INVITE_VERIFICATION_REQUEST:{
 	  std::string owner_pub_key, name, public_key, invite_id, encrypted_join_key;
 	  st>>owner_pub_key>>name>>public_key>>invite_id>>encrypted_join_key;
-	  if(helpers::base64_decode(owner_pub_key) != public_key_ || name!=name_){
+	  if(owner_pub_key != room_data_["public_key"].asString() || name!=room_data_["name"].asString()){
 	    postError("get incorrect invite request");
 	    break;
 	  }
 	  try{
-	    themispp::secure_message_t sm(private_key_, helpers::base64_decode(public_key));
+	    themispp::secure_message_t sm(helpers::base64_decode(room_data_["private_key"].asString()), helpers::base64_decode(public_key));
 	    std::vector<uint8_t> join_key=sm.decrypt(helpers::base64_decode(encrypted_join_key));
 	    themispp::secure_cell_seal_t ss(join_key);
 	    socket_.send("ROOM.INVITE.VERIFICATION_RESPONSE "+
 			 public_key+" "+
 			 name+" "+			 
 			 owner_pub_key+" "+
-			 helpers::base64_encode(ss.encrypt(room_key_, invites_[invite_id])));
-	    invites_.erase(invite_id);
+			 helpers::base64_encode(ss.encrypt(helpers::base64_decode(room_data_["room_key"].asString()), helpers::base64_decode(room_data_["invites"][invite_id].asString()))));
+	    room_data_["invites"].removeMember(invite_id);
 	  }catch(themispp::exception_t& e){
 	    postError(e.what());
 	  }}
@@ -165,14 +174,15 @@ namespace pnacl {
 	case SCR_ROOM_INVITE_VERIFICATION_RESPONSE:{
 	  std::string public_key, name, owner_public_key, encoded_room_key;
 	  st>>public_key>>name>>owner_public_key>>encoded_room_key;
-	  if(helpers::base64_decode(public_key) != public_key_ || name!=name_){
+	  if(public_key != room_data_["public_key"].asString() || name!=room_data_["name"].asString()){
 	    postError("get incorrect invite response");
 	  }
 	  try{
-	    themispp::secure_cell_seal_t ss(room_key_);
-	    room_key_=ss.decrypt(helpers::base64_decode(encoded_room_key), invite_token_);
-	    room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(room_key_)); 
-	    post("open_room", readable_name_);
+	    themispp::secure_cell_seal_t ss(helpers::base64_decode(room_data_["room_key"].asString()));
+	    room_data_["room_key"]=helpers::base64_encode(ss.decrypt(helpers::base64_decode(encoded_room_key), helpers::base64_decode(room_data_["invite_token"].asString())));
+	    room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(helpers::base64_decode(room_data_["room_key"].asString())));
+	    save_callback_(room_data_["name"].asString(), room_data_);
+	    post("open_room", room_data_["readable_name"].asString());
 	  }catch(themispp::exception_t& e){
 	    postError(e.what());
 	  }}
@@ -180,7 +190,7 @@ namespace pnacl {
 	case SCR_ROOM_MESSAGE_ACCEPTED:{
 	  std::string room, message_token, message;
 	  st>>room>>message_token>>message;
-	  if(room!=name_){
+	  if(room!=room_data_["name"].asString()){
 	    postError("get incorrect message request");
 	    break;
 	  }
@@ -212,7 +222,7 @@ namespace pnacl {
       themispp::secure_rand_t<32> rnd;
       std::vector<uint8_t> new_invite_id=rnd.get();
       std::vector<uint8_t> new_invite_token=rnd.get();
-      invites_[helpers::base64_encode(new_invite_id)]=new_invite_token;
+      room_data_["invites"][helpers::base64_encode(new_invite_id)]=helpers::base64_encode(new_invite_token);
       post("invite", serialize_invite(new_invite_id, new_invite_token));
     }
 
@@ -221,7 +231,7 @@ namespace pnacl {
 	themispp::secure_rand_t<32> rnd;
 	std::vector<uint8_t> message_token=rnd.get(); 
 	socket_.send("ROOM.MESSAGE "+
-		     name_+" "+
+		     room_data_["name"].asString()+" "+
 		     helpers::base64_encode(message_token)+" "+
 		     helpers::base64_encode(room_encrypter_->encrypt(std::vector<uint8_t>(message.c_str(), message.c_str()+message.length()), message_token)));
       }catch(themispp::exception_t &e){
@@ -232,9 +242,9 @@ namespace pnacl {
   private:
     std::string serialize_invite(const std::vector<uint8_t> id, const std::vector<uint8_t> token){
       Json::Value serialized_invite = Json::Value(Json::objectValue);
-      serialized_invite["room_name"]=name_;
-      serialized_invite["readable_name"]=readable_name_;
-      serialized_invite["public_key"]=helpers::base64_encode(public_key_);
+      serialized_invite["room_name"]=room_data_["name"].asString();
+      serialized_invite["readable_name"]=room_data_["readable_name"].asString();
+      serialized_invite["public_key"]=room_data_["public_key"].asString();
       serialized_invite["invite"]["id"]=helpers::base64_encode(id);
       serialized_invite["invite"]["token"]=helpers::base64_encode(token);
       std::string serializet_invite_string=Json::FastWriter().write(serialized_invite);
@@ -246,11 +256,11 @@ namespace pnacl {
       std::string invite_str((char*)(&data[0]), data.size());
       Json::Value root;
       Json::Reader().parse(invite_str, root);
-      name_=root["room_name"].asString();
-      readable_name_=root["readable_name"].asString();
-      owner_public_key_=helpers::base64_decode(root["public_key"].asString());
-      invite_id_=helpers::base64_decode(root["invite"]["id"].asString());
-      invite_token_=helpers::base64_decode(root["invite"]["token"].asString());
+      room_data_["name"]=root["room_name"].asString();
+      room_data_["readable_name"]=root["readable_name"].asString();
+      room_data_["owner_public_key"]=root["public_key"].asString();
+      room_data_["invite_id"]=root["invite"]["id"].asString();
+      room_data_["invite_token"]=root["invite"]["token"].asString();
     }
 
   private:
@@ -281,20 +291,14 @@ namespace pnacl {
     };
 
     uint32_t acceptable_commands_mask_=0xffffffff;
-  private:
-  std::map<std::string, invite_t > invites_;
-  bool owner_;
-  pp::Instance* ppinstance_;
-  private_key_t private_key_;
-  public_key_t public_key_;
-  public_key_t owner_public_key_;
-  invite_t invite_id_;
-  invite_t invite_token_;
-  room_key_t room_key_;
-  std::string name_;
-  std::string readable_name_;
-  std::shared_ptr<themispp::secure_cell_seal_t> room_encrypter_;
 
+  private:
+    std::map<std::string, invite_t > invites_;
+    bool owner_;
+    pp::Instance* ppinstance_;
+    std::shared_ptr<themispp::secure_cell_seal_t> room_encrypter_;
+  private:
+    Json::Value room_data_; 
 
   private:
     pnacl::secure_websocket_api socket_;

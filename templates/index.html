@@ -397,19 +397,16 @@
 				i[0].value = null;
 				i[1].value = null;
 			})();
-
 			var
-			arr = m[1].split(' '),
+			arr = JSON.parse(m[1]),
 			rooms = $('rooms');
-
-			for(var i = 0; i < arr.length -1; i++){
-
+	                for(var i in arr){
 				var
 				p = _node('p'),
 				a = _node('a'),
-				t = _txt( arr[i] );
+				t = _txt( arr[i].id );
 
-				p.id=arr[i];
+				p.id=arr[i].id;
 				a.href = "#";
 				a.onclick = function() {
 
@@ -424,11 +421,11 @@
 					}
 
 					this.parentNode.className = 'sel';
-					_client.postMessage('open_room ' + this.parentNode.id );
+					_client.postMessage(['room.open', this.parentNode.id] );
 					return false;
 				}
 
-				a.appendChild( _node('b') ).appendChild( _txt('Secure room name') );
+				a.appendChild( _node('b') ).appendChild( _txt(arr[i].name) );
 				a.appendChild(t);
 				p.appendChild(a);
 				rooms.appendChild(p);

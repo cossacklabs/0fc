@@ -175,27 +175,32 @@ public:
     }
     const pp::VarArray params(var_message);
     if (UI_STRING_PARAM(params,0) == "login"){ //username, password
-      std::string user_name=UI_STRING_PARAM(params,2);
+      std::string user_name=UI_STRING_PARAM(params,1);
+      user_name_=user_name;
       store_=std::shared_ptr<pnacl::fileio_api>(new pnacl::fileio_api(this, UI_STRING_PARAM(params,2), [this, user_name](){
 	    postInfo("file_system_created");
 	    store_->load(user_name, [this](const Json::Value& data){
 		user_data_=data;
-		std::string rooms="{";
-		for(int32_t i=user_data_["rooms"].size()-1; i>=0; --i){
-		  rooms+="\""+user_data_["rooms"][i]["id"].asString()+"\":\""+user_data_["rooms"][i]["name"].asString()+"\""+(i?",":"");
+		std::string rooms_str="[";
+		if(user_data_["rooms"].isObject()){
+		  Json::Value::Members rooms=user_data_["rooms"].getMemberNames();
+		  for(Json::Value::Members::iterator it=rooms.begin(); it!=rooms.end(); ++it){
+		    if(it!=rooms.begin())rooms_str+=",";
+		    rooms_str+="{\"id\":\""+(*it)+"\", \"name\":\""+user_data_["rooms"][*it]["readable_name"].asString()+"\"}";
+		  }
 		}
-		rooms+="}";
-		post("available_chat_list", rooms);
+		rooms_str+="]";
+		post("available_chat_list", rooms_str);
 	      }, [this](int){
 		postError("can`t open file ...");
 		user_data_=Json::Value(Json::objectValue);
 		user_data_["name"]=user_name_;
 		user_data_["rooms"]=Json::Value(Json::objectValue);
-		post("available_chat_list", "");
+		post("available_chat_list", "[]");
 	      });	    
 	  }, [this](int){
 	    postError("can`t open file system");
-	    post("available_chat_list", "");
+	    post("available_chat_list", "[]");
 	  }));
     } else if (UI_STRING_PARAM(params,0) == "logout"){
       room_.reset();
@@ -219,12 +224,18 @@ private:
   }
   
   void save_room(const std::string& room_id, const Json::Value& val){
-    user_data_["rooms"][room_id]=val;
+    if(val.isNull()){
+      user_data_["rooms"].removeMember(room_id);
+    }else{
+      user_data_["rooms"][room_id]=val;
+    }
+    fprintf(stderr, "\ntry to save: %s\n", Json::FastWriter().write(user_data_).c_str());
     store_->save(user_name_, user_data_, [this](){
 	postInfo("data saved successfully");
       },[this](int error_code){
+	fprintf(stderr, "\n%i\n", error_code);
 	postError("data save error");
-      });
+      });   
   }
   
   void post(const std::string& command, const std::string& param1, const std::string& param2=""){

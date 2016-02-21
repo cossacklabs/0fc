@@ -69,6 +69,7 @@ namespace pnacl {
     virtual ~fileio_api(){}
     
     void save(const std::string& key, const Json::Value& data, save_callback_t on_save, error_callback_t on_error) {
+      save_callback_=on_save;
       file_thread_.message_loop().PostWork(callback_factory_.NewCallback(&fileio_api::save_, key, data, on_error));
     }
 
@@ -107,41 +108,60 @@ namespace pnacl {
       }catch(themispp::exception_t& e){
 	on_error(-5);
       }
-      pp::FileRef ref(file_system_, file_name.c_str());
+      pp::FileRef ref(file_system_, (std::string("/")+file_name).c_str());
       pp::FileIO file(instance_);
-      if (file.Open(ref, PP_FILEOPENFLAG_WRITE | PP_FILEOPENFLAG_CREATE | PP_FILEOPENFLAG_TRUNCATE, pp::BlockUntilComplete()) == PP_OK
-	  && file.Write(0, (const char*)(&enc_data[0]), enc_data.size(), pp::BlockUntilComplete())==enc_data.size()
-	  && file.Flush(pp::BlockUntilComplete())==PP_OK)
-	int a=1;//on_save();
-      else
-	on_error(-6);
+      int32_t res = file.Open(ref, PP_FILEOPENFLAG_WRITE | PP_FILEOPENFLAG_CREATE | PP_FILEOPENFLAG_TRUNCATE, pp::BlockUntilComplete());
+      if ( res == PP_OK){
+	res = file.Write(0, (const char*)(&enc_data[0]), enc_data.size(), pp::BlockUntilComplete());
+	if(res==enc_data.size()) {
+	  if(file.Flush(pp::BlockUntilComplete())==PP_OK){
+	    file.Close();
+	    save_callback_();
+	  } else {
+	    file.Close();
+	    on_error(-6);
+	  }
+	} else {
+	  file.Close();
+	  on_error(res);
+	}
+      } else {
+	on_error(res);
+      }
     }
 
     void load_(int32_t result, const std::string& file_name, load_callback_t on_load, error_callback_t on_error){
       if (!file_system_ready_)
 	on_error(-1);
-      pp::FileRef ref(file_system_, file_name.c_str());
+      pp::FileRef ref(file_system_, (std::string("/")+file_name).c_str());
       pp::FileIO file(instance_);
       PP_FileInfo info;
       int32_t open_result = file.Open(ref, PP_FILEOPENFLAG_READ, pp::BlockUntilComplete());
-      if (open_result == PP_ERROR_FILENOTFOUND)
+      if (open_result == PP_ERROR_FILENOTFOUND){
 	on_error(-2);
-      else if (open_result == PP_OK && file.Query(&info, pp::BlockUntilComplete())==PP_OK){
+	return;
+      }
+      if (open_result == PP_OK && file.Query(&info, pp::BlockUntilComplete())==PP_OK){
 	std::vector<uint8_t> data(info.size);
-	if(file.Read(0, (char*)(&data[0]), data.size(), pp::BlockUntilComplete())==data.size())
+	if(file.Read(0, (char*)(&data[0]), data.size(), pp::BlockUntilComplete())==data.size()){
+	  file.Close();
 	  try{
 	    data=encrypter_.decrypt(data);
 	    Json::Value root;
 	    Json::Reader reader;
-	    if(!reader.parse(std::string((char*)(&data[0]), data.size()), root))
+	    if(!reader.parse(std::string((char*)(&data[0]), data.size()), root)){
 	      on_error(-4);
+	      return;
+	    }
 	    on_load(root);
 	    return;
 	  }catch(themispp::exception_t& e){
 	    on_error(-3);
 	    return;
 	  }
+	}
       }
+      file.Close();
       on_error(open_result);
     }	    
 
@@ -154,6 +174,7 @@ namespace pnacl {
     //    std::string user_name_;
     themispp::secure_cell_seal_t encrypter_;
     //    fileio_listener_t *listener_;
+    save_callback_t save_callback_;
   };
   
 } //end pnacl

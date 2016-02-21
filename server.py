@@ -75,10 +75,9 @@ def wshandler(request):
                 elif message_params[0] == COMMAND.OPEN_ROOM and pub_key:
                     if (message_params[1] in rooms and
                         pub_key in rooms[message_params[1]]['users']):
-                        ws_response.send_str('{} 111'.format(COMMAND.OPENED_ROOM))
+                        ws_response.send_str(base64.b64encode(session.wrap('{} 111'.format(COMMAND.OPENED_ROOM).encode("UTF-8"))).decode("UTF-8"))
                     else:
-                        ws_response.send_str('{} {}'.format(COMMAND.ERROR_ROOM,
-                                                                message_params[1]))
+                        ws_response.send_str(base64.b64encode(session.wrap('{} {}'.format(COMMAND.ERROR_ROOM, message_params[1]).encode("UTF-8"))).decode("UTF-8"))
                 elif message_params[0] == COMMAND.MESSAGE and pub_key:
                     if (message_params[1] in rooms and
                         pub_key in rooms[message_params[1]]['users']):
@@ -88,9 +87,9 @@ def wshandler(request):
                                 online[user_public_key]['socket'].send_str(base64.b64encode(online[user_public_key]['session'].wrap(msg.encode("UTF-8"))).decode("UTF-8"))
                             else:
                                 if user_public_key in history:
-                                    history[user_public_key].append(base64.b64encode(online[user_public_key]['session'].wrap(msg.encode("UTF-8"))).decode("UTF-8"))
+                                    history[user_public_key].append(msg)
                                 else:
-                                    history[user_public_key] = [base64.b64encode(online[user_public_key]['session'].wrap(msg.encode("UTF-8"))).decode("UTF-8")]
+                                    history[user_public_key] = [msg]
                     else:
                         ws_response.send_str('{} {}'.format(COMMAND.MESSAGE_ERROR,
                                                             message_params[1]))
@@ -99,7 +98,7 @@ def wshandler(request):
                     online[pub_key] = {'socket': ws_response, 'session': session}
                     if pub_key in history:
                         for history_message in history[pub_key]:
-                            ws_response.send_str(history_message)
+                            ws_response.send_str(base64.b64encode(session.wrap(history_message.encode("UTF-8"))).decode("UTF-8"))
                         history[pub_key] = []
                 else:
                     ws_response.send_str(base64.b64encode(session.wrap('{} malformed request'.format(COMMAND.ERROR).encode("UTF-8"))).decode("UTF-8"))
@@ -167,7 +166,7 @@ if __name__ == '__main__':
         description='Run server')
 
     parser.add_argument('-p', '--port', type=int, help='Port number',
-                        default=8888)
+                        default=5103)
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Output verbosity')
     args = parser.parse_args()
