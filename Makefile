@@ -13,11 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-NACL_SDK_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_47/
 PNACL_ROOT ?= /home/andrey/progs/libs/nacl_sdk/pepper_47/
-#PNACL_ROOT=/home/andrey/progs/libs/nacl_sdk/pepper_44
-#PNACL_TOOLCHAIN=/toolchain/linux_pnacl
 
 # Project Build flags
 WARNINGS := -Wno-long-long -Wall -Wswitch-enum -pedantic -Werror
@@ -26,16 +22,16 @@ CXXFLAGS := -pthread -std=gnu++98 $(WARNINGS)
 #
 # Compute tool paths
 #
-GETOS := python $(NACL_SDK_ROOT)/tools/getos.py
-OSHELPERS = python $(NACL_SDK_ROOT)/tools/oshelpers.py
+GETOS := python $(PNACL_ROOT)/tools/getos.py
+OSHELPERS = python $(PNACL_ROOT)/tools/oshelpers.py
 OSNAME := $(shell $(GETOS))
 RM := $(OSHELPERS) rm
 
-PNACL_TC_PATH := $(abspath $(NACL_SDK_ROOT)/toolchain/$(OSNAME)_pnacl)
+PNACL_TC_PATH := $(abspath $(PNACL_ROOT)/toolchain/$(OSNAME)_pnacl)
 PNACL_CXX := $(PNACL_TC_PATH)/bin/pnacl-clang++
 PNACL_FINALIZE := $(PNACL_TC_PATH)/bin/pnacl-finalize
-CXXFLAGS := -g -I$(NACL_SDK_ROOT)/include -I$(NACL_SDK_ROOT)/include/pnacl -Iwebthemis/themis/src -Iwebthemis/themis/src/wrappers/themis webthemis/getentropy_pnacl.cc
-LDFLAGS := -L$(NACL_SDK_ROOT)/lib/pnacl/Release -lppapi_cpp -lppapi -lnacl_io -ljsoncpp -Lwebthemis/build -lthemis -lsoter -lcrypto -lnacl_io --pnacl-exceptions=sjlj
+CXXFLAGS := -g -I$(PNACL_ROOT)/include -I$(PNACL_ROOT)/include/pnacl -Iwebthemis/themis/src -Iwebthemis/themis/src/wrappers/themis webthemis/getentropy_pnacl.cc
+LDFLAGS := -L$(PNACL_ROOT)/lib/pnacl/Release -lppapi_cpp -lppapi -lnacl_io -ljsoncpp -Lwebthemis/build -lthemis -lsoter -lcrypto -lnacl_io --pnacl-exceptions=sjlj
 
 #
 # Disable DOS PATH warning when using Cygwin based tools Windows
@@ -54,13 +50,3 @@ secure_chat.bc: secure_chat.cc
 
 secure_chat.pexe: secure_chat.bc
 	$(PNACL_FINALIZE) -o static/$@ $<
-
-
-#
-# Makefile target to run the SDK's simple HTTP server and serve this example.
-#
-HTTPD_PY := python $(NACL_SDK_ROOT)/tools/httpd.py --no-dir-check
-
-.PHONY: serve
-serve: all
-	$(HTTPD_PY) -C "$(CURDIR)"
