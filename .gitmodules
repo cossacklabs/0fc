@@ -1,6 +1,0 @@
-[submodule "libs/libressl"]
-	path = libs/libressl
-	url = https://github.com/libressl-portable/portable.git
-[submodule "libs/themis"]
-	path = libs/themis
-	url = https://github.com/cossacklabs/themis
