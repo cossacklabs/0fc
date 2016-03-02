@@ -1,0 +1,3 @@
+[submodule "webthemis"]
+	path = webthemis
+	url = https://github.com/cossacklabs/webthemis
