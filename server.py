@@ -44,6 +44,7 @@ class COMMAND:
     INVITE_RESPONSE = 'ROOM.INVITE.VERIFICATION_RESPONSE'
     INVALID_INVITE = 'ROOM.INVITE.DECLINED'
     MESSAGE = 'ROOM.MESSAGE'
+    MESSAGE_KEY_ROTATE = 'ROOM.MESSAGE.KEY.ROTATE'
     MESSAGE_ERROR = 'ROOM.MESSAGE.ERROR'
     PUBLIC_KEY = 'PUBKEY'
     ERROR = 'ERROR'
@@ -88,6 +89,9 @@ def wshandler(request):
                         pub_key == rooms[message_params[2]]['owner']):
                         rooms[message_params[2]]['users'].append(message_params[1])
                         online[message_params[1]]['socket'].send_str(base64.b64encode(online[message_params[1]]['session'].wrap(msg.encode("UTF-8"))).decode("UTF-8"))
+                        if message_params[2] in rooms_history:
+                            for history_message in rooms_history[message_params[2]]:
+                                online[message_params[1]]['socket'].send_str(base64.b64encode(online[message_params[1]]['session'].wrap(history_message.encode("UTF-8"))).decode("UTF-8"))
                 elif message_params[0] == COMMAND.OPEN_ROOM and pub_key:
                     if (message_params[1] in rooms and
                         pub_key in rooms[message_params[1]]['users']):
@@ -97,6 +101,26 @@ def wshandler(request):
                 elif message_params[0] == COMMAND.MESSAGE and pub_key:
                     if (message_params[1] in rooms and
                         pub_key in rooms[message_params[1]]['users']):
+                        if message_params[1] in rooms_history:
+                            rooms_history[message_params[1]].append(msg)
+                        else:
+                            rooms_history[message_params[1]]=[msg]
+                        for user_public_key in rooms[message_params[1]]['users']:
+                            if (user_public_key in online and
+                                user_public_key != pub_key):
+                                online[user_public_key]['socket'].send_str(base64.b64encode(online[user_public_key]['session'].wrap(msg.encode("UTF-8"))).decode("UTF-8"))
+                            else:
+                                if user_public_key in history:
+                                    history[user_public_key].append(msg)
+                                else:
+                                    history[user_public_key] = [msg]
+                    else:
+                        ws_response.send_str('{} {}'.format(COMMAND.MESSAGE_ERROR,
+                                                            message_params[1]))
+                elif message_params[0] == COMMAND.MESSAGE_KEY_ROTATE and pub_key:
+                    if (message_params[1] in rooms and
+                        pub_key == rooms[message_params[1]]['owner']):
+                        rooms_history[message_params[1]]=[msg]
                         for user_public_key in rooms[message_params[1]]['users']:
                             if (user_public_key in online and
                                 user_public_key != pub_key):
@@ -199,6 +223,7 @@ if __name__ == '__main__':
     pub_keys = {}
     online = {}
     history = {}
+    rooms_history = {}
 
     loop = asyncio.get_event_loop()
     handler, app, srv = loop.run_until_complete(init(port, loop))

@@ -27,6 +27,7 @@
 #include "themispp/secure_message.hpp"
 #include "json/json.h"
 
+#define KEY_ROTATION_LIMIT 100
 
 namespace pnacl {
   class secure_chat_room_t{
@@ -69,6 +70,7 @@ namespace pnacl {
       room_data_["private_key"]=helpers::base64_encode(gen.get_priv());
       themispp::secure_rand_t<32> rnd;
       room_data_["room_key"]=helpers::base64_encode(rnd.get());
+      room_data_["message_count"]=0;      
       std::string ii=room_data_["public_key"].asString();
       room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(helpers::base64_decode(room_data_["room_key"].asString()))); 
       socket_.open(url, std::vector<uint8_t>(ii.c_str(), ii.c_str()+ii.length()), helpers::base64_decode(room_data_["private_key"].asString()), [this](){
@@ -196,10 +198,46 @@ namespace pnacl {
 	  }
 	  try{
 	    std::vector<uint8_t> msv=room_encrypter_->decrypt(helpers::base64_decode(message), helpers::base64_decode(message_token));
+	    if(!(room_data_["message_count"].isNull())){
+	      room_data_["message_count"]=room_data_["message_count"].asInt()+1;
+	      if(room_data_["message_count"].asInt()>=KEY_ROTATION_LIMIT){
+		try{
+		  themispp::secure_rand_t<32> rnd;
+		  std::vector<uint8_t> message_token=rnd.get();
+		  std::vector<uint8_t> new_room_key=rnd.get();		  
+		  socket_.send("ROOM.MESSAGE.KEY.ROTATE "+
+			       room_data_["name"].asString()+" "+
+			       helpers::base64_encode(message_token)+" "+
+			       helpers::base64_encode(room_encrypter_->encrypt(new_room_key, message_token)));
+		  room_data_["room_key"]=helpers::base64_encode(new_room_key);
+		  room_data_["message_count"]=0;
+		  room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(helpers::base64_decode(room_data_["room_key"].asString())));
+		  postInfo("key rotated");
+		}catch(themispp::exception_t &e){
+		  postError(e.what());
+		}
+	      }
+	    }
 	    post("new_message", std::string(msv.begin(), msv.end()));
 	  }catch(themispp::exception_t& e){
 	    postError(e.what());	    
 	  }}
+	  break;
+	case SCR_ROOM_MESSAGE_KEY_ROTATE:{
+	  std::string room, message_token, message;
+	  st>>room>>message_token>>message;
+	  if(room!=room_data_["name"].asString()){
+	    postError("get incorrect message request");
+	    break;
+	  }
+	  try{
+	    std::vector<uint8_t> msv=room_encrypter_->decrypt(helpers::base64_decode(message), helpers::base64_decode(message_token));
+	    room_data_["room_key"]=helpers::base64_encode(msv);
+	    room_encrypter_=std::shared_ptr<themispp::secure_cell_seal_t>(new themispp::secure_cell_seal_t(helpers::base64_decode(room_data_["room_key"].asString())));
+	    postInfo("key rotated");
+	  }catch(themispp::exception_t& e){
+	    postError(e.what());	    
+	  }}	  
 	  break;
 	case SCR_ROOM_MESSAGE_HELLO_ACCEPTED:
 	  break;
@@ -274,7 +312,8 @@ namespace pnacl {
       SCR_ROOM_MESSAGE_ACCEPTED=0x00000100,
       SCR_ROOM_MESSAGE_HELLO_ACCEPTED=0x00000200,
       SCR_ROOM_MESSAGE_BYE_ACCEPTED=0x00000400,
-      SCR_ROOM_INVITE_DECLINED=0x00001000
+      SCR_ROOM_INVITE_DECLINED=0x00001000,
+      SCR_ROOM_MESSAGE_KEY_ROTATE=0x00002000
     };
     
     std::map<std::string, uint32_t> received_command_map_={
@@ -287,7 +326,8 @@ namespace pnacl {
       {"ROOM.INVITE.DECLINED", SCR_ROOM_INVITE_DECLINED},
       {"ROOM.MESSAGE", SCR_ROOM_MESSAGE_ACCEPTED},
       {"ROOM.MESSAGE.HELLO", SCR_ROOM_MESSAGE_HELLO_ACCEPTED},
-      {"ROOM.MESSAGE.BYE", SCR_ROOM_MESSAGE_BYE_ACCEPTED}
+      {"ROOM.MESSAGE.BYE", SCR_ROOM_MESSAGE_BYE_ACCEPTED},
+      {"ROOM.MESSAGE.KEY.ROTATE", SCR_ROOM_MESSAGE_KEY_ROTATE}
     };
 
     uint32_t acceptable_commands_mask_=0xffffffff;
