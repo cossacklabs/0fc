@@ -1,2 +1,4 @@
-# 0f-server
-Anonymous web (+mobile soon) chat server, built on top of Themis
+![0fclogo.png]
+
+## 0fc (aka zeroface): Anonymous web chat with strong cryptography
+
