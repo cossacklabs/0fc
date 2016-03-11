@@ -112,7 +112,7 @@ You're done!
 - User sends confirmation sealed message to the room owner. `[client]`
 - Owner, upon checking users confirmation message signs his public key and sends to server `[client]`+`[server]`
 - Server checks the signature and considers user as added to the chatroom `[server]`
-- Once joining key has been used, it gets deleted, so it can be used only once `[server]`
+- Once invite token been used, it is discarded by the room owner `[server]`
 
 #### Message exchange
 
