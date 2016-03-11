@@ -3,8 +3,6 @@
 
 ## anonymous web chat with strong cryptography
 
-0fc was started as testing playground for some sophisticated use-cases of [Themis](https://github.com/cossacklabs/themis)/[WebThemis](https://github.com/cossacklabs/webthemis), but became interesting enough to release it as a separate blob of code.
-
 0fc enables you to run a secure in-browser group chat with isolated chatrooms, having some special features:
 - end-to-end for specific chat room: server cannot do better than DoS attack
 - server is considered minimal trusted zone, all important operations happen on client side:
@@ -13,6 +11,8 @@
 - during key sharing every service message is protected by keys, derived from random data of more than one party
 - outgoing messages are encrypted and sent only once (all room members share the same symmetric key)
 - secret access token is used once (deleted after key confirmation)
+
+0fc was started as testing playground for some sophisticated use-cases of [Themis](https://github.com/cossacklabs/themis)/[WebThemis](https://github.com/cossacklabs/webthemis), but became interesting enough to release it as a separate blob of code.
 
 IMPORTANT: To be considered really secure, 0fc should be validated by third parties and deployed properly. No cryptographic tool should be trusted without third-party audit. Before that happens (if it ever does), there's a protocol description at the end of this document, which allows you to take a look at the inner workings of 0fc and make your own judgement. 
 
