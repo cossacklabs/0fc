@@ -12,6 +12,7 @@
   - secret tokens, used to give access to chatroom, are generated on client side (although part of the verification happen on server side)
 - during key sharing every service message is protected by keys, derived from random data of more than one party
 - outgoing messages are encrypted and sent only once (all room members share the same symmetric key)
+- secret access token is used once (deleted after key confirmation)
 
 IMPORTANT: To be considered really secure, 0fc should be validated by third parties and deployed properly. No cryptographic tool should be trusted without third-party audit. Before that happens (if it ever does), there's a protocol description at the end of this document, which allows you to take a look at the inner workings of 0fc and make your own judgement. 
 
@@ -111,10 +112,17 @@ You're done!
 - User sends confirmation sealed message to the room owner. `[client]`
 - Owner, upon checking users confirmation message signs his public key and sends to server `[client]`+`[server]`
 - Server checks the signature and considers user as added to the chatroom `[server]`
+- Once joining key has been used, it gets deleted, so it can be used only once `[server]`
 
 #### Message exchange
 
 - Room members exchange messages sealing them with room key. Server just forwards encrypted messages without having access to their contents. `[server]`
+
+#### Key management
+
+- Keypair is generated for every room `[client]`
+- Keypair is stored in browser persistent storage `[client]`
+- Browser persistent storage is encrypted with Secure Cell (seal mode), key derived from user's password, inputs when joining the chat `[client]`
 
 #### Server communication
 
@@ -129,9 +137,11 @@ You're done!
 
 #### Room orchestration
 
-- a list of members is maintained for every room `[server]`
+- a list of members is maintained for every room as a list of public keys (+indication who is room owner) `[server]`
 - every room has a room owner (originally, room creator) `[server]`
 - room owner is responsible for key rotation  `[client]`
 
 #### Chat history
 
+- server enables clients to fetch chat history since their last departure for members who have been online and know keys before rotation `[server]`
+- server enables clients to fetch chat history since last key rotation for new members `[server]`
