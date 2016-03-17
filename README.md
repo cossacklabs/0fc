@@ -1,7 +1,7 @@
 
 ![imgs/0fclogo.png](imgs/0fclogo.png)
 
-## anonymous web chat with strong cryptography
+## end-to-end discreet web chat with strong cryptography
 
 0fc enables you to run a secure in-browser group chat with isolated chatrooms, having some special features:
 - end-to-end for specific chat room: server cannot do better than DoS attack
@@ -14,11 +14,13 @@
 
 0fc was started as testing playground for some sophisticated use-cases of [Themis](https://github.com/cossacklabs/themis)/[WebThemis](https://github.com/cossacklabs/webthemis), but became interesting enough to release it as a separate blob of code.
 
-IMPORTANT: To be considered really secure, 0fc should be validated by third parties and deployed properly. No cryptographic tool should be trusted without third-party audit. Before that happens (if it ever does), there's a protocol description at the end of this document, which allows you to take a look at the inner workings of 0fc and make your own judgement. 
+IMPORTANT: To be considered really secure, 0fc should be validated by third parties and deployed properly. No cryptographic tool should be trusted without third-party audit. Before that happens (if it ever does), there's a protocol description at the end of this document, which allows you to take a look at the inner workings of 0fc and make your own judgement. We ourselves are aware of a few rarely possible threats unrelated to cryptography, but rather to the way browser works (see Threat model section of [blog  post](https://cossacklabs.com/building-endtoend-webchat.html)).
 
 0fc backend is written in Python, front-end is [WebThemis](https://github.com/cossacklabs/webthemis)-based, so it works in Google Chrome-based browsers only (yet).
 
 0fc is licensed via Apache 2 license. We would be happy if you build something based on this code and 0fc's protocol; if you'd like any help with this, [get in touch](https://cossacklabs.com/contacts.html). 
+
+[Read the blog post](https://cossacklabs.com/building-endtoend-webchat.html) to learn more about 0fc and underlying technologies.
 
 # Installing and using
 
