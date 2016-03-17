@@ -145,3 +145,7 @@ You're done!
 
 - server enables clients to fetch chat history since their last departure for members who have been online and know keys before rotation `[server]`
 - server enables clients to fetch chat history since last key rotation for new members `[server]`
+
+## Want to know more? 
+
+[Read our blog post](https://cossacklabs.com/building-endtoend-webchat.html) with some background on 0fc development and various security considerations.
