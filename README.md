@@ -86,6 +86,25 @@ If you'd like to recompile 0fc client (PNaCl object) yourself, here's what you h
   
 You're done!
 
+# Architecture
+
+![imgs/0fclogo.png](imgs/arch.png)
+
+0fc consists of 2 classical components: client and server. 
+
+Clients are responsible for: 
+- showing UI to the user
+- all cryptographic and trust management functions
+- communication with relay server
+
+Server is responsible for: 
+- serving UI + PEXE (PNaCl module) to clients via HTTP GET
+- running websocket relay service, which receives messages and relays them to everyone. 
+
+Over websocket link, clients talk to server via SecureSession Themis object, which provides high-level transport security. Server keys are hardcoded into clients, so trust is established based on correlation between real server key and server key fed to client in binaries. 
+
+Within this SecureSession link, SecureCell-encrypted messages are transmitted.
+
 # Protocol & scheme
 
 ![imgs/0fc_prot.png](imgs/0fc_prot.png)
