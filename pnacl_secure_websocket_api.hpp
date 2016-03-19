@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _PNACL_SECURE_WEBSOCKET_API_H_
-#define _PNACL_SECURE_WEBSOCKET_API_H_
+#ifndef ZEROFC_PNACL_SECURE_WEBSOCKET_API_H_
+#define ZEROFC_PNACL_SECURE_WEBSOCKET_API_H_
 
 #include "themispp/secure_session.hpp"
 #include "pnacl_websocket_api.hpp"
@@ -120,4 +120,4 @@ namespace pnacl {
   
 } //end pnacl
 
-#endif /* _PNACL_SECURE_WEBSOCKET_API_H_ */
+#endif /* ZEROFC_PNACL_SECURE_WEBSOCKET_API_H_ */

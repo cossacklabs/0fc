@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _PNACL_FILEIO_API_SYNC_HPP_
-#define _PNACL_FILEIO_API_SYNC_HPP_
+#ifndef ZEROFC_PNACL_FILEIO_API_SYNC_HPP_
+#define ZEROFC_PNACL_FILEIO_API_SYNC_HPP_
 
 #include "ppapi/c/ppb_file_io.h"
 #include "ppapi/cpp/directory_entry.h"
@@ -49,7 +49,6 @@ namespace pnacl {
     {}
     
     virtual ~fileio_api(){
-      if(encrypter_)
 	delete encrypter_;
     }
 
@@ -205,4 +204,4 @@ namespace pnacl {
 } //end pnacl
 
 
-#endif /* _PNACL_FILEIO_API_HPP_ */
+#endif /* ZEROFC_PNACL_FILEIO_API_HPP_ */

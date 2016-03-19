@@ -14,8 +14,8 @@
 * limitations under the License.
 */
 
-#ifndef PNACL_EXCEPTION_HPP
-#define PNACL_EXCEPTION_HPP
+#ifndef ZEROFC_PNACL_EXCEPTION_HPP
+#define ZEROFC_PNACL_EXCEPTION_HPP
 
 #include <stdexcept>
 

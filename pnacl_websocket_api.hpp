@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _PNACL_WEBSOCKET_API_HPP_
-#define _PNACL_WEBSOCKET_API_HPP_
+#ifndef ZEROFC_PNACL_WEBSOCKET_API_HPP_
+#define ZEROFC_PNACL_WEBSOCKET_API_HPP_
 
 
 #include <string>
@@ -98,4 +98,4 @@ namespace pnacl{
   };
 
 } /*namespace pnacl*/
-#endif /* _PNACL_WEBSOCKET_API_HPP_ */
+#endif /* ZEROFC_PNACL_WEBSOCKET_API_HPP_ */

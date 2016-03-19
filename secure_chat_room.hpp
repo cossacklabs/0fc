@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef _SECURE_CHAT_ROOM_HPP_
-#define _SECURE_CHAT_ROOM_HPP_
+#ifndef ZEROFC_SECURE_CHAT_ROOM_HPP_
+#define ZEROFC_SECURE_CHAT_ROOM_HPP_
 
 #include <functional>
 
@@ -367,4 +367,4 @@ namespace pnacl {
   
 } //end pnacl
 
-#endif /* _SECURE_CHAT_ROOM_HPP_ */
+#endif /* ZEROFC_SECURE_CHAT_ROOM_HPP_ */
